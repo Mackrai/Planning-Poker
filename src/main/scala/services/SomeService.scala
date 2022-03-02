@@ -1,7 +1,22 @@
 package services
 
+import cats.Functor
+import cats.data.EitherT
 import cats.effect._
+import sttp.model.StatusCode
 
-object SomeService {
-    def foo[F[_]: Sync]: F[Unit] = Sync[F].pure(println("123"))
+class SomeService[F[_]: Sync: Functor]() {
+
+  def hello: EitherT[F, (StatusCode, String), String] =
+    EitherT.fromOptionF(
+      Sync[F].pure(Some("Hello").asInstanceOf[Option[String]]),
+      (StatusCode.InternalServerError, "failure")
+    )
+
+  def error: EitherT[F, (StatusCode, String), Int] =
+    EitherT.fromOptionF(
+      Sync[F].pure(None.asInstanceOf[Option[Int]]),
+      (StatusCode.InternalServerError, "failure")
+    )
+
 }
