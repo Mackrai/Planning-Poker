@@ -6,7 +6,7 @@ import sttp.tapir.json.circe.jsonBody
 
 object Endpoints {
 
-  val base: Endpoint[Unit, (StatusCode, String), Unit, Any] =
+  private val base: Endpoint[Unit, (StatusCode, String), Unit, Any] =
     endpoint.in("api").errorOut(statusCode).errorOut(stringBody)
 
   val helloEndpoint: Endpoint[Unit, (StatusCode, String), String, Any] =

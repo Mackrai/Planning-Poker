@@ -9,12 +9,12 @@ import sttp.tapir.server.ServerEndpoint
 
 class SomeRouter[F[_]: ConcurrentEffect: Logger](someService: SomeService[F]) {
 
-  val hello: ServerEndpoint[Unit, (StatusCode, String), String, Any, F] =
+  private val hello: ServerEndpoint[Unit, (StatusCode, String), String, Any, F] =
     Endpoints.helloEndpoint.serverLogic { _ =>
       someService.hello.value <* Logger[F].info("hello")
     }
 
-  val error: ServerEndpoint[Unit, (StatusCode, String), Int, Any, F] =
+  private val error: ServerEndpoint[Unit, (StatusCode, String), Int, Any, F] =
     Endpoints.errorEndpoint.serverLogic(_ => someService.error.value)
 
   val endpoints =

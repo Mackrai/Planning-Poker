@@ -20,7 +20,7 @@ object Main extends IOApp {
 
   override def run(args: List[String]): IO[ExitCode] = start[IO]
 
-  def start[F[_]: ConcurrentEffect: Timer: ContextShift: Logger]: F[ExitCode] =
+  private def start[F[_]: ConcurrentEffect: Timer: ContextShift: Logger]: F[ExitCode] =
     for {
       serverConf <-
         ConcurrentEffect[F].pure(ConfigSource.default.loadOrThrow[ServerConfig]) <*
@@ -31,7 +31,7 @@ object Main extends IOApp {
       server     <- httpServer(serverConf, routes).compile.drain.as(ExitCode.Success)
     } yield server
 
-  def httpServer[F[_]: ConcurrentEffect: Timer](
+  private def httpServer[F[_]: ConcurrentEffect: Timer](
       conf: ServerConfig,
       routes: HttpApp[F]
   ): fs2.Stream[F, ExitCode] =
@@ -40,7 +40,7 @@ object Main extends IOApp {
       .withHttpApp(routes)
       .serve
 
-  def httpApp[F[_]: ConcurrentEffect: Timer: ContextShift: Logger](
+  private def httpApp[F[_]: ConcurrentEffect: Timer: ContextShift: Logger](
       queue: Queue[F, Unit],
       topic: Topic[F, Unit]
   ): HttpApp[F] = {
