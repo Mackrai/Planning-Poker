@@ -10,6 +10,8 @@ lazy val root =
         cats,
         catsEffect,
         circe,
+        logback % Runtime,
+        log4cats,
         pureConfig
       ) ++ http4s ++ tapir,
       addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),

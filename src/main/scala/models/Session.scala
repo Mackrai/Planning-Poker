@@ -7,6 +7,6 @@ case class Session(
     title: String,
     description: Option[String] = None,
     currentTask: Option[Task] = None,
-    tasks: Seq[Task] = Seq.empty,
-    users: Seq[User]
+    tasks: Set[Task] = Set.empty,
+    users: Set[User]
 )

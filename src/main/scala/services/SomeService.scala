@@ -1,11 +1,10 @@
 package services
 
-import cats.Functor
 import cats.data.EitherT
 import cats.effect._
 import sttp.model.StatusCode
 
-class SomeService[F[_]: Sync: Functor]() {
+class SomeService[F[_]: Sync]() {
 
   def hello: EitherT[F, (StatusCode, String), String] =
     EitherT.fromOptionF(

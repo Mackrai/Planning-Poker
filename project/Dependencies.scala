@@ -7,6 +7,8 @@ object Dependencies {
     val catsEffect = "2.5.1"
     val circe      = "0.14.1"
     val http4s     = "0.22.0"
+    val logback    = "1.2.11"
+    val log4cats   = "1.5.1"
     val pureConfig = "0.17.1"
     val tapir      = "0.18.3"
   }
@@ -29,5 +31,9 @@ object Dependencies {
     "tapir-http4s-server"
   ).map("com.softwaremill.sttp.tapir" %% _ % Version.tapir)
 
-  val pureConfig = "com.github.pureconfig" %% "pureconfig" % "0.17.1"
+  val logback = "ch.qos.logback" % "logback-classic" % Version.logback
+
+  val log4cats = "org.typelevel" %% "log4cats-slf4j" % Version.log4cats
+
+  val pureConfig = "com.github.pureconfig" %% "pureconfig" % Version.pureConfig
 }
