@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Planning Poker Test</title>
+    <meta name="description" content="For testing sending/receiving messages">
+</head>
+<body>
+    <button onclick="send()">Send</button>
+
+    <script>
+        const webSocket = new WebSocket('ws://localhost:8080/chat');
+
+        function send() {
+            webSocket.send(`Message from button click`);
+        }
+
+        // Listen for messages
+        webSocket.addEventListener('message', function (event) {
+            console.log('Message from server: ', event.data);
+        });
+    </script>
+</body>
+</html>

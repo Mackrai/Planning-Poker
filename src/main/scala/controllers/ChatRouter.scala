@@ -24,8 +24,12 @@ class ChatRouter[F[_]: ConcurrentEffect: Logger](
 
       val fromClientPipe: Pipe[F, WebSocketFrame, Unit] = { fromClient =>
         val parsedInput = fromClient.collect {
-          case Text(text, _) => text
-          case _             => "???"
+          case Text(text, _) =>
+            println(text) // временно для дебага
+            text
+          case _             =>
+            println("???") // временно для дебага
+            "???"
         }
 
         parsedInput.through(topic.publish)
