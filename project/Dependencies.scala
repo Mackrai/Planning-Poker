@@ -28,7 +28,8 @@ object Dependencies {
   val tapir: Seq[ModuleID] = Seq(
     "tapir-core",
     "tapir-json-circe",
-    "tapir-http4s-server"
+    "tapir-http4s-server",
+    "tapir-http4s-client"
   ).map("com.softwaremill.sttp.tapir" %% _ % Version.tapir)
 
   val logback = "ch.qos.logback" % "logback-classic" % Version.logback

@@ -7,7 +7,7 @@ import services.SomeService
 import sttp.model.StatusCode
 import sttp.tapir.server.ServerEndpoint
 
-class SomeRouter[F[_]: ConcurrentEffect: Logger](someService: SomeService[F]) {
+class SomeRouter[F[_]: ConcurrentEffect: Logger](someService: SomeService[F]) extends Router[F] {
 
   private val hello: ServerEndpoint[Unit, (StatusCode, String), String, Any, F] =
     Endpoints.helloEndpoint.serverLogic { _ =>
@@ -17,7 +17,7 @@ class SomeRouter[F[_]: ConcurrentEffect: Logger](someService: SomeService[F]) {
   private val error: ServerEndpoint[Unit, (StatusCode, String), Int, Any, F] =
     Endpoints.errorEndpoint.serverLogic(_ => someService.error.value)
 
-  val endpoints =
+  override val endpoints =
     List(
       hello,
       error
