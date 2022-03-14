@@ -3,6 +3,7 @@ import cats.implicits._
 import configs.ServerConfig
 import controllers.{ChatRouter, SomeRouter}
 import fs2.concurrent.{Queue, Topic}
+import models.{InputMessage, OutChatMessage, OutputMessage}
 import org.http4s._
 import org.http4s.blaze.server._
 import org.http4s.implicits.http4sKleisliResponseSyntaxOptionT
@@ -22,17 +23,23 @@ object Main extends IOApp {
 
   private def start[F[_]: ConcurrentEffect: Timer: ContextShift: Logger]: F[ExitCode] =
     for {
-      serverConf <-
+      serverConf   <-
         ConcurrentEffect[F].pure(ConfigSource.default.loadOrThrow[ServerConfig]) <*
           Logger[F].info("Loaded server config")
-      chatQueue  <- Queue.unbounded[F, String] // TODO Разобраться, надо ли использовать Queue
-      chatTopic  <- Topic[F, String]("Start topic")
-      routes      = httpApp(chatQueue, chatTopic)
-//      queueStream = chatQueue.dequeue.through(chatTopic.publish)
-//      server     <-
-//        fs2.Stream(httpServer(serverConf, routes), queueStream).parJoinUnbounded.compile.drain.as(ExitCode.Success)
-      server     <- httpServer(serverConf, routes).compile.drain.as(ExitCode.Success)
-    } yield server
+      chatQueue    <- Queue.unbounded[F, InputMessage] // TODO POK-3 Разобраться, надо ли использовать Queue (скорее всего надо)
+      chatTopic    <- Topic[F, OutputMessage](OutChatMessage("Start topic"))
+      routes        = httpApp(chatQueue, chatTopic)
+      queueStream   =
+        // Достаем из очереди InputMessage
+        chatQueue.dequeue
+          // Пока что план такой:
+          //    Тут будем обрабатывать InputMessage, преобразовывать в OutputMessage
+          .map(inputMessage => OutChatMessage(inputMessage.stringify)) // TODO POK-1 Состояние приложения
+          //        и отправлять в topic
+          .through(chatTopic.publish)
+      serverStream <-
+        fs2.Stream(httpServer(serverConf, routes), queueStream).parJoinUnbounded.compile.drain.as(ExitCode.Success)
+    } yield serverStream
 
   private def httpServer[F[_]: ConcurrentEffect: Timer](
       conf: ServerConfig,
@@ -44,8 +51,8 @@ object Main extends IOApp {
       .serve
 
   private def httpApp[F[_]: ConcurrentEffect: Timer: ContextShift: Logger](
-      queue: Queue[F, String],
-      topic: Topic[F, String]
+      queue: Queue[F, InputMessage],
+      topic: Topic[F, OutputMessage]
   ): HttpApp[F] = {
     val someService = new SomeService[F]
 
