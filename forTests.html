@@ -6,10 +6,18 @@
     <meta name="description" content="For testing sending/receiving messages">
 </head>
 <body>
-    <button onclick="send()">Send</button>
-
+    <div>
+        <button onclick="send()">Test test test</button>
+    </div>
+    <div>
+        <button onclick="joinChat()">Join chat</button>
+    </div>
     <script>
-        const webSocket = new WebSocket('ws://localhost:8080/chat');
+        const webSocket = new WebSocket('ws://localhost:8080/ws');
+
+        function joinChat() {
+            webSocket.send('/join someChat someUser');
+        }
 
         function send() {
             webSocket.send(`Message from button click`);
