@@ -1,16 +1,17 @@
 import cats.effect._
+import cats.effect.concurrent.Ref
 import cats.implicits._
 import configs.ServerConfig
-import controllers.{ChatRouter, SomeRouter}
+import controllers.ChatRouter
 import fs2.concurrent.{Queue, Topic}
-import models.{InputMessage, OutChatMessage, OutputMessage}
+import models._
 import org.http4s._
 import org.http4s.blaze.server._
 import org.http4s.implicits.http4sKleisliResponseSyntaxOptionT
+import org.http4s.server.middleware._
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import pureconfig.ConfigSource
-import services.SomeService
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 import scala.concurrent.ExecutionContext.global
@@ -23,18 +24,21 @@ object Main extends IOApp {
 
   private def start[F[_]: ConcurrentEffect: Timer: ContextShift: Logger]: F[ExitCode] =
     for {
-      serverConf   <-
+      serverConf <-
         ConcurrentEffect[F].pure(ConfigSource.default.loadOrThrow[ServerConfig]) <*
           Logger[F].info("Loaded server config")
-      chatQueue    <- Queue.unbounded[F, InputMessage] // TODO POK-3 Разобраться, надо ли использовать Queue (скорее всего надо)
-      chatTopic    <- Topic[F, OutputMessage](OutChatMessage("Start topic"))
-      routes        = httpApp(chatQueue, chatTopic)
+      chatQueue  <- Queue.unbounded[F, InputMessage]
+      chatTopic  <- Topic[F, OutputMessage](OutChatMessage("Start topic"))
+
+      state <- Ref[F].of(AppState(Map.empty[String, Session[F]], Map.empty[String, User]))
+
+      routes        = httpApp(chatQueue, chatTopic, state)
       queueStream   =
         // Достаем из очереди InputMessage
         chatQueue.dequeue
           // Пока что план такой:
           //    Тут будем обрабатывать InputMessage, преобразовывать в OutputMessage
-          .map(inputMessage => OutChatMessage(inputMessage.stringify)) // TODO POK-1 Состояние приложения
+          .map(inputMessage => OutChatMessage(inputMessage.stringify))
           //        и отправлять в topic
           .through(chatTopic.publish)
       serverStream <-
@@ -52,17 +56,17 @@ object Main extends IOApp {
 
   private def httpApp[F[_]: ConcurrentEffect: Timer: ContextShift: Logger](
       queue: Queue[F, InputMessage],
-      topic: Topic[F, OutputMessage]
+      topic: Topic[F, OutputMessage],
+      state: Ref[F, AppState[F]]
   ): HttpApp[F] = {
-    val someService = new SomeService[F]
+    val chatRouter = new ChatRouter[F](queue, topic, state)
 
-    val someRouter = new SomeRouter[F](someService)
-    val chatRouter = new ChatRouter[F](queue, topic)
+    val routers = List(chatRouter)
 
-    val routers = List(someRouter, chatRouter)
-
-    (Http4sServerInterpreter[F]()
-      .toRoutes(routers.flatMap(_.endpoints)) <+> chatRouter.wsRoute).orNotFound
+    CORS(
+      Http4sServerInterpreter[F]()
+        .toRoutes(routers.flatMap(_.endpoints)) <+> chatRouter.joinChat
+    ).orNotFound
   }
 
 }

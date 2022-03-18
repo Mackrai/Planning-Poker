@@ -7,26 +7,38 @@
 </head>
 <body>
     <div>
-        <button onclick="send()">Test test test</button>
-    </div>
-    <div>
-        <button onclick="joinChat()">Join chat</button>
+        <button onclick="getSessions()">Получить список сессий</button>
     </div>
     <script>
-        const webSocket = new WebSocket('ws://localhost:8080/ws');
-
-        function joinChat() {
-            webSocket.send('/join someChat someUser');
+        function getSessions() {
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.onreadystatechange = function() {
+                if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+                    callback(xmlHttp.responseText);
+            }
+            xmlHttp.open("GET", "localhost:8080/sessions", true); // true for asynchronous
+            xmlHttp.send(null);
         }
 
-        function send() {
-            webSocket.send(`Message from button click`);
-        }
+        // function joinChat() {
+        //     chatWs = new WebSocket(`ws://localhost:8080/joinChat/${chatId}/${userId}`);
+        //     chatWs.addEventListener('message', function (event) {
+        //         console.log('Message from server: ', event.data);
+        //     });
+        //     chatWs.send(`/join ${chatId} ${userId}`);
+        // }
 
-        // Listen for messages
-        webSocket.addEventListener('message', function (event) {
-            console.log('Message from server: ', event.data);
-        });
+        // function newChat() {
+        //     newChatName = document.getElementById('newChatName').value
+        //
+        //     const Http = new XMLHttpRequest()
+        //     const url='localhost:8080/createChat'
+        //     Http.open("POST", url)
+        //     Http.setRequestHeader("Accept", "application/json")
+        //     Http.setRequestHeader("Content-type", "application/json")
+        //     Http.send(chatId)
+        //     Http.onreadystatechange = (e) => { sessionsJson = Http.responseText }
+        // }
     </script>
 </body>
 </html>

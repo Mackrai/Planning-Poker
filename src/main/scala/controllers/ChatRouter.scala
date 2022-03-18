@@ -1,41 +1,72 @@
 package controllers
 
+import api.{CreateChatRequest, JoinChatRequest, ListSessionsResponse, SessionResponse}
+import cats.Applicative
 import cats.effect.ConcurrentEffect
+import cats.effect.concurrent.Ref
+import cats.implicits._
+import fs2.Stream
 import fs2.concurrent.{Queue, Topic}
-import fs2.{Pipe, Stream}
-import models.{Disconnect, InputMessage, OutputMessage}
+import models._
 import org.http4s.HttpRoutes
+import org.http4s.circe.CirceEntityCodec.circeEntityDecoder
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.websocket.WebSocketFrame
 import org.http4s.websocket.WebSocketFrame.{Close, Text}
 import org.typelevel.log4cats.Logger
+import sttp.model.StatusCode
+import sttp.tapir.server.ServerEndpoint
+import util.Endpoints
 
-class ChatRouter[F[_]: ConcurrentEffect: Logger](
+class ChatRouter[F[_]: ConcurrentEffect: Logger: Applicative](
     queue: Queue[F, InputMessage],
-    topic: Topic[F, OutputMessage]
+    topic: Topic[F, OutputMessage],
+    appState: Ref[F, AppState[F]]
 ) extends Router[F]
     with Http4sDsl[F] {
 
-  // Хз как сделать это через tapir
-  val wsRoute: HttpRoutes[F] =
-    HttpRoutes.of[F] { case GET -> Root / "ws" =>
-      val toClient: Stream[F, WebSocketFrame.Text] =
-        topic.subscribe(1000).map(msg => Text(msg.stringify))
+  val joinChat: HttpRoutes[F] =
+    HttpRoutes.of[F] { case req @ POST -> Root / "joinChat" =>
+      for {
+        request <- req.as[JoinChatRequest]
 
-      val fromClientPipe: Pipe[F, WebSocketFrame, Unit] = { fromClient =>
-        val parsedInput: Stream[F, InputMessage] = fromClient.collect {
-          case Text(text, _) => InputMessage.parse(text)
-          case Close(_)      => Disconnect()
+        user = User(name = "User-1", role = Role.Host)
+
+        toClient       = topic.subscribe(1000).map(msg => Text(msg.stringify))
+        fromClientPipe = { (fromClient: Stream[F, WebSocketFrame]) =>
+          val parsedInput: Stream[F, InputMessage] = fromClient.collect {
+            case Text(text, _) => InputMessage.parse(text)
+            case Close(_)      => Disconnect()
+          }
+          parsedInput.evalTap(msg => Logger[F].info(msg.toString)).through(queue.enqueue)
         }
 
-        // Вставляем в очередь запарсенное сообщение
-        parsedInput.evalTap(msg => Logger[F].info(msg.toString)).through(queue.enqueue)
-      }
-
-      WebSocketBuilder[F].build(toClient, fromClientPipe)
+        websocket <- WebSocketBuilder[F].build(toClient, fromClientPipe)
+      } yield websocket
     }
 
-  override val endpoints = List()
+  val sessions: ServerEndpoint[Unit, (StatusCode, String), ListSessionsResponse, Any, F] =
+    Endpoints.sessions
+      .serverLogic(_ =>
+        appState.get.map(state =>
+          api
+            .ListSessionsResponse(state.sessions.toSeq.map { case (id, session) =>
+              SessionResponse(id, session.title)
+            })
+            .asRight
+        )
+      )
+
+  val createChat: ServerEndpoint[CreateChatRequest, (StatusCode, String), Unit, Any, F] =
+    Endpoints.createChat
+      .serverLogic { req =>
+        val newSession = Session[F](title = req.title)
+        appState
+          .update(state => AppState[F](state.sessions + (newSession.uuid.toString -> newSession), state.users))
+          .map(u => Either.right(u))
+      }
+
+  override val endpoints = List(sessions, createChat)
 
 }
