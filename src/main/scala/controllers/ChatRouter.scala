@@ -26,24 +26,19 @@ class ChatRouter[F[_]: ConcurrentEffect: Logger: Applicative](
 ) extends Router[F]
     with Http4sDsl[F] {
 
-  val joinChat: HttpRoutes[F] =
-    HttpRoutes.of[F] { case req @ POST -> Root / "joinChat" =>
-      for {
-        request <- req.as[JoinChatRequest]
-
-        user = User(name = "User-1", role = Role.Host)
-
-        toClient       = topic.subscribe(1000).map(msg => Text(msg.stringify))
-        fromClientPipe = { (fromClient: Stream[F, WebSocketFrame]) =>
-          val parsedInput: Stream[F, InputMessage] = fromClient.collect {
-            case Text(text, _) => InputMessage.parse(text)
-            case Close(_)      => Disconnect()
-          }
-          parsedInput.evalTap(msg => Logger[F].info(msg.toString)).through(queue.enqueue)
+  val ws: HttpRoutes[F] =
+    HttpRoutes.of[F] { case GET -> Root / "ws" =>
+      val user           = User(name = "User-1", role = Role.Host)
+      val toClient       = topic.subscribe(1000).map(msg => Text(msg.stringify))
+      val fromClientPipe = { (fromClient: Stream[F, WebSocketFrame]) =>
+        val parsedInput: Stream[F, InputMessage] = fromClient.collect {
+          case Text(text, _) => InputMessage.parse(text)
+          case Close(_)      => Disconnect()
         }
+        parsedInput.evalTap(msg => Logger[F].info(msg.toString)).through(queue.enqueue)
+      }
 
-        websocket <- WebSocketBuilder[F].build(toClient, fromClientPipe)
-      } yield websocket
+      WebSocketBuilder[F].build(toClient, fromClientPipe)
     }
 
   val sessions: ServerEndpoint[Unit, (StatusCode, String), ListSessionsResponse, Any, F] =
@@ -65,6 +60,13 @@ class ChatRouter[F[_]: ConcurrentEffect: Logger: Applicative](
         appState
           .update(state => AppState[F](state.sessions + (newSession.uuid.toString -> newSession), state.users))
           .map(u => Either.right(u))
+      }
+
+  val joinChat =
+    Endpoints.joinChat
+      .serverLogic { req =>
+        req.chatId
+        req.userId
       }
 
   override val endpoints = List(sessions, createChat)

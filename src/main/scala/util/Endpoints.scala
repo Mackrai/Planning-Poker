@@ -1,6 +1,6 @@
 package util
 
-import api.{CreateChatRequest, ListSessionsResponse}
+import api.{CreateChatRequest, JoinChatRequest, ListSessionsResponse}
 import sttp.model.StatusCode
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.{Endpoint, endpoint, statusCode, stringBody}
@@ -20,5 +20,10 @@ object Endpoints {
     base.post
       .in("createChat")
       .in(jsonBody[CreateChatRequest])
+
+  val joinChat: Endpoint[JoinChatRequest, (StatusCode, String), Unit, Any] =
+    base.post
+      .in("joinChat")
+      .in(jsonBody[JoinChatRequest])
 
 }

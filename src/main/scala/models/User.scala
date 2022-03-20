@@ -7,3 +7,5 @@ case class User(
     name: String,
     role: String
 )
+
+case class UserId(raw: String) extends AnyVal

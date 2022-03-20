@@ -13,3 +13,5 @@ case class Session[F[_]](
   def addUser(user: User): Session[F]    = this.copy(users = users + user)
   def removeUser(user: User): Session[F] = this.copy(users = users - user)
 }
+
+case class SessionId(raw: String) extends AnyVal

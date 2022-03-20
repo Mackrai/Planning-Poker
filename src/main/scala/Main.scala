@@ -30,7 +30,7 @@ object Main extends IOApp {
       chatQueue  <- Queue.unbounded[F, InputMessage]
       chatTopic  <- Topic[F, OutputMessage](OutChatMessage("Start topic"))
 
-      state <- Ref[F].of(AppState(Map.empty[String, Session[F]], Map.empty[String, User]))
+      state <- Ref[F].of(AppState.empty)
 
       routes        = httpApp(chatQueue, chatTopic, state)
       queueStream   =
@@ -57,7 +57,7 @@ object Main extends IOApp {
   private def httpApp[F[_]: ConcurrentEffect: Timer: ContextShift: Logger](
       queue: Queue[F, InputMessage],
       topic: Topic[F, OutputMessage],
-      state: Ref[F, AppState[F]]
+      state: Ref[F, AppState]
   ): HttpApp[F] = {
     val chatRouter = new ChatRouter[F](queue, topic, state)
 
@@ -65,7 +65,7 @@ object Main extends IOApp {
 
     CORS(
       Http4sServerInterpreter[F]()
-        .toRoutes(routers.flatMap(_.endpoints)) <+> chatRouter.joinChat
+        .toRoutes(routers.flatMap(_.endpoints)) <+> chatRouter.ws
     ).orNotFound
   }
 
