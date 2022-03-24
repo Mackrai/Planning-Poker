@@ -4,19 +4,22 @@ object Dependencies {
 
   object Version {
     val cats       = "2.7.0"
-    val catsEffect = "2.5.1"
+    val catsEffect = "3.3.8"
     val circe      = "0.14.1"
-    val http4s     = "0.22.0"
+    val http4s     = "0.23.11"
     val logback    = "1.2.11"
-    val log4cats   = "1.5.1"
+    val log4cats   = "2.2.0"
     val pureConfig = "0.17.1"
-    val tapir      = "0.18.3"
+    val tapir      = "1.0.0-M2"
+    val fs2 = "3.2.5"
   }
 
   val cats       = "org.typelevel" %% "cats-core"   % Version.cats
   val catsEffect = "org.typelevel" %% "cats-effect" % Version.catsEffect
 
   val circe = "io.circe" %% "circe-generic" % Version.circe
+
+  val fs2 = "co.fs2" %% "fs2-core" % Version.fs2
 
   val http4s: Seq[ModuleID] = Seq(
     "http4s-blaze-server",
