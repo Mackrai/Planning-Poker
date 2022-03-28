@@ -18,7 +18,7 @@ import sttp.ws.WebSocketFrame.{Close, Text}
 class ChatRouter[F[_]: Async: Logger: Functor: Monad](
     queue: Queue[F, InputMessage],
     topic: Topic[F, OutputMessage]
-) extends WsRouter[F]
+) extends Router[F]
     with Http4sDsl[F] {
 
   // Пример с эндпоинтом через тапир
