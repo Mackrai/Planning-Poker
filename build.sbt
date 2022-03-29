@@ -12,13 +12,16 @@ lazy val root =
         circe,
         logback % Runtime,
         log4cats,
-        pureConfig
+        pureConfig,
+        fs2
       ) ++ http4s ++ tapir,
       addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
       scalacOptions ++= Seq(
         "-feature",
         "-deprecation",
         "-unchecked",
-        "-language:postfixOps"
+        "-language:postfixOps",
+        "-Ymacro-annotations"
       )
+
     )
