@@ -30,7 +30,6 @@ object Main extends IOApp {
       streamFromChatQueue = Stream.fromQueueUnterminated(chatQueue)
       chatTopic    <- Topic[F, OutputMessage]
       routes        = httpApp(chatQueue, chatTopic)
-      webSocketRoutes = httpAppWebSocket(chatQueue, chatTopic)
       queueStream   =
         // Достаем из очереди InputMessage
         streamFromChatQueue
@@ -40,19 +39,16 @@ object Main extends IOApp {
           //        и отправлять в topic
           .through(chatTopic.publish)
       serverStream <-
-        fs2.Stream(httpServer(serverConf, routes, webSocketRoutes), queueStream).parJoinUnbounded.compile.drain.as(ExitCode.Success)
+        fs2.Stream(httpServer(serverConf, routes), queueStream).parJoinUnbounded.compile.drain.as(ExitCode.Success)
     } yield serverStream
 
   private def httpServer[F[_]: Async](
       conf: ServerConfig,
-      routesApp: HttpRoutes[F],
-      webSocketRoutes: WebSocketBuilder2[F] => HttpRoutes[F]
+      routesApp: WebSocketBuilder2[F] => HttpRoutes[F],
   ): fs2.Stream[F, ExitCode] =
     BlazeServerBuilder[F]
       .bindHttp(conf.port, conf.host)
-      .withHttpWebSocketApp(wsb => {
-        (webSocketRoutes(wsb) <+> routesApp).orNotFound
-      })
+      .withHttpWebSocketApp(wsb => routesApp(wsb).orNotFound)
       .serve
 
   private def httpApp[F[_]: Async: Logger](
@@ -62,23 +58,11 @@ object Main extends IOApp {
     val someService = new SomeService[F]
 
     val someRouter = new SomeRouter[F](someService)
-
-    val routers = List(someRouter)
-
-    Http4sServerInterpreter[F]()
-      .toRoutes(routers.flatMap(_.endpoints))
-  }
-
-  private def httpAppWebSocket[F[_]: Async: Logger](
-      queue: Queue[F, InputMessage],
-      topic: Topic[F, OutputMessage]
-  ) = {
     val wsRouter = new ChatRouter[F](queue, topic)
 
-    val routes = List(wsRouter)
+    val routers = List(someRouter, wsRouter)
 
     Http4sServerInterpreter[F]()
-      .toWebSocketRoutes(routes.flatMap(_.endpoints))
+      .toWebSocketRoutes(routers.flatMap(_.endpoints))
   }
-
 }
