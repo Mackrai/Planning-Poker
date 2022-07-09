@@ -3,7 +3,7 @@ package models
 import java.util.UUID
 
 case class Task(
-    uuid: UUID = UUID.randomUUID(),
+    id: TaskId = TaskId(),
     title: String,
     description: Option[String] = None,
     userVotes: Map[User, Int] = Map.empty,
@@ -12,3 +12,5 @@ case class Task(
 
   def isPassed: Boolean = finalScore.nonEmpty
 }
+
+case class TaskId(raw: String = UUID.randomUUID().toString) extends AnyVal
