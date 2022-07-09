@@ -2,6 +2,7 @@ package api
 
 import io.circe.Codec
 import io.circe.generic.semiauto.deriveCodec
+import models.SessionId
 import sttp.tapir.Schema
 import sttp.tapir.generic.auto.schemaForCaseClass
 
@@ -12,7 +13,7 @@ object ListSessionsResponse {
   implicit lazy val schema: Schema[ListSessionsResponse]   = Schema.derivedSchema
 }
 
-case class SessionResponse(id: String, title: String)
+case class SessionResponse(id: SessionId)
 
 object SessionResponse {
   implicit val codec: Codec.AsObject[SessionResponse] = deriveCodec[SessionResponse]

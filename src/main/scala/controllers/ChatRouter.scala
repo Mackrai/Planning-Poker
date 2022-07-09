@@ -1,6 +1,6 @@
 package controllers
 
-import api.{CreateChatRequest, JoinChatRequest, ListSessionsResponse, SessionResponse}
+import api.{CreateChatRequest, ListSessionsResponse, SessionResponse}
 import cats.Applicative
 import cats.effect.ConcurrentEffect
 import cats.effect.concurrent.Ref
@@ -9,7 +9,6 @@ import fs2.Stream
 import fs2.concurrent.{Queue, Topic}
 import models._
 import org.http4s.HttpRoutes
-import org.http4s.circe.CirceEntityCodec.circeEntityDecoder
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.websocket.WebSocketFrame
@@ -22,7 +21,7 @@ import util.Endpoints
 class ChatRouter[F[_]: ConcurrentEffect: Logger: Applicative](
     queue: Queue[F, InputMessage],
     topic: Topic[F, OutputMessage],
-    appState: Ref[F, AppState[F]]
+    appState: Ref[F, AppState]
 ) extends Router[F]
     with Http4sDsl[F] {
 
@@ -46,8 +45,8 @@ class ChatRouter[F[_]: ConcurrentEffect: Logger: Applicative](
       .serverLogic(_ =>
         appState.get.map(state =>
           api
-            .ListSessionsResponse(state.sessions.toSeq.map { case (id, session) =>
-              SessionResponse(id, session.title)
+            .ListSessionsResponse(state.sessions.toSeq.map { case (sessionId, _) =>
+              SessionResponse(sessionId)
             })
             .asRight
         )
@@ -58,7 +57,7 @@ class ChatRouter[F[_]: ConcurrentEffect: Logger: Applicative](
       .serverLogic { req =>
         val newSession = Session[F](title = req.title)
         appState
-          .update(state => AppState[F](state.sessions + (newSession.uuid.toString -> newSession), state.users))
+          .update(state => AppState(state.sessions + (newSession.uuid.toString -> newSession)))
           .map(u => Either.right(u))
       }
 

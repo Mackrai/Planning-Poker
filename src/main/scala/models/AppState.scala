@@ -1,6 +1,6 @@
 package models
 
-case class AppState(userSessions: Map[UserId, SessionId], sessionUsers: Map[SessionId, Set[UserId]]) {
+case class AppState(sessions: Map[SessionId, Set[UserId]]) {
 
   def process(inputMessage: InputMessage) = inputMessage match {
     case ChatMessage(message) => ???
@@ -11,11 +11,11 @@ case class AppState(userSessions: Map[UserId, SessionId], sessionUsers: Map[Sess
   }
 
   private def addToRoom(newUserId: UserId, sessionId: SessionId) =
-    sessionUsers.get(sessionId).map(users => users + newUserId)
+    sessions.get(sessionId).map(users => users + newUserId)
 
 }
 
 object AppState {
 
-  val empty: AppState = AppState(userSessions = Map.empty, sessionUsers = Map.empty)
+  lazy val empty: AppState = AppState(sessions = Map.empty)
 }
