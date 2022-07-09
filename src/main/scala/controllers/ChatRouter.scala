@@ -24,39 +24,20 @@ class ChatRouter[F[_]: Async: Logger: Functor: Monad](
 ) extends Router[F]
     with Http4sDsl[F] {
 
-//  val ws: HttpRoutes[F] =
-//    HttpRoutes.of[F] { case GET -> Root / "ws" =>
-//      val user           = User(name = "User-1", role = Role.Host)
-//      val toClient       = topic.subscribe(1000).map(msg => Text(msg.stringify))
-//      val fromClientPipe = { (fromClient: Stream[F, WebSocketFrame]) =>
-//        val parsedInput: Stream[F, InputMessage] = fromClient.collect {
-//          case Text(text, _, _) => InputMessage.parse(text)
-//          case Close(_, _)      => Disconnect()
-//        }
-//        parsedInput.evalTap(msg => Logger[F].info(msg.toString)).through(queue.enqueue)
-//      }
-//    }
+  private val toClient: Stream[F, WebSocketFrame] =
+    topic
+      .subscribe(1000)
+//      .filter(_.forUsers) TODO
+      .map(msg => Text(msg.stringify, finalFragment = true, None))
 
-  // Пример с эндпоинтом через тапир
-  /* https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples */
-  private val inputToOutput: Pipe[F, WebSocketFrame, WebSocketFrame] = { in =>
-    val parsedInput: Stream[F, InputMessage] = in.collect {
+  private val inputToOutput: Pipe[F, WebSocketFrame, WebSocketFrame] =
+    _.collect {
       case Text(text, _, _) => InputMessage.parse(text)
       case Close(_, _)      => Disconnect()
     }
-
-    val entryStream: Stream[F, InputMessage] = Stream.emits(Seq(ChatMessage("Welcome")))
-
-    (entryStream ++ parsedInput)
       .evalTap(msg => Logger[F].info(msg.toString))
-      .evalTap(_ => Logger[F].info("sssssssssssssssssss"))
       .evalTap(queue.offer)
-
-    topic
-      .subscribe(1000)
-      //      .filter(_.forUser) todo
-      .map(msg => Text(msg.stringify, finalFragment = false, None))
-  }
+      .flatMap(_ => toClient)
 
   private val websocket: ServerEndpoint[Fs2Streams[F] with capabilities.WebSockets, F] =
     Endpoints.wsEndpoint[F].serverLogicSuccess[F](_ => Async[F].pure(inputToOutput))

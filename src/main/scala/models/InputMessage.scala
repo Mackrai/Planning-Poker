@@ -11,12 +11,12 @@ case class ChatMessage(message: String) extends InputMessage {
 }
 
 //   /join sessionsId userId
-case class JoinChat(sessionsId: SessionId, userId: UserId) extends InputMessage {
+case class Join(sessionsId: SessionId, userId: UserId) extends InputMessage {
   override def stringify: String = s"/join $sessionsId $userId"
 }
 
 //   /leave userId
-case class LeaveChat(userId: UserId) extends InputMessage {
+case class Leave(userId: UserId) extends InputMessage {
   override def stringify: String = s"/leave $userId"
 }
 
@@ -31,19 +31,29 @@ case class Disconnect() extends InputMessage {
 }
 
 object InputMessage {
+
   def parse(raw: String): InputMessage =
-    extractParts(raw) match {
-      case ("/join", session, user, _) => JoinChat(SessionId(session), UserId(user))
-      case ("/leave", user, _, _)      => LeaveChat(UserId(user))
+    parseCommand(raw) match {
+      case ("/join", session, user, _) => Join(SessionId(session), UserId(user))
+      case ("/leave", user, _, _)      => Leave(UserId(user))
       case ("/help", _, _, _)          => Help()
       case _                           => ChatMessage(raw)
     }
 
-  // TODO Нормальный парсер
-  private def extractParts(raw: String) =
-    raw.split(" ").toList match {
-      case first :: second :: third :: tail => (first, second, third, tail.mkString(" "))
-      case first :: second :: third :: Nil  => (first, second, third, "")
-    }
+  private def firstWord(raw: String): (String, String) = {
+    val trimmed    = raw.trim
+    val firstSpace = trimmed.indexOf(' ')
+    if (firstSpace <= 0)
+      (trimmed, "")
+    else
+      trimmed.splitAt(firstSpace)
+  }
+
+  private def parseCommand(raw: String): (String, String, String, String) = {
+    val (command, arg1WithTail) = firstWord(raw)
+    val (arg1, arg2withTail)    = firstWord(arg1WithTail)
+    val (arg2, tail)            = firstWord(arg2withTail)
+    (command, arg1, arg2, tail.trim)
+  }
 
 }

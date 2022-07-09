@@ -47,6 +47,7 @@ object Main extends IOApp {
     BlazeServerBuilder[F]
       .bindHttp(conf.port, conf.host)
       .withHttpWebSocketApp(wsb => routesApp(wsb).orNotFound)
+      .withSocketKeepAlive(true)
       .serve
 
   private def httpApp[F[_]: Async: Logger](
