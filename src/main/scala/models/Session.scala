@@ -1,5 +1,8 @@
 package models
 
+import io.circe.Codec
+import io.circe.generic.semiauto.deriveCodec
+
 import java.util.UUID
 
 case class Session[F[_]](
@@ -15,3 +18,7 @@ case class Session[F[_]](
 }
 
 case class SessionId(raw: String) extends AnyVal
+
+object SessionId {
+  implicit val codec: Codec[SessionId] = deriveCodec
+}

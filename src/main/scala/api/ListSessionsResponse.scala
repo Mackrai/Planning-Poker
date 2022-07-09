@@ -6,16 +6,10 @@ import models.SessionId
 import sttp.tapir.Schema
 import sttp.tapir.generic.auto.schemaForCaseClass
 
-case class ListSessionsResponse(sessions: Seq[SessionResponse])
+case class ListSessionsResponse(sessions: Seq[SessionId])
 
 object ListSessionsResponse {
   implicit val codec: Codec.AsObject[ListSessionsResponse] = deriveCodec[ListSessionsResponse]
   implicit lazy val schema: Schema[ListSessionsResponse]   = Schema.derivedSchema
 }
 
-case class SessionResponse(id: SessionId)
-
-object SessionResponse {
-  implicit val codec: Codec.AsObject[SessionResponse] = deriveCodec[SessionResponse]
-  implicit lazy val schema: Schema[SessionResponse]   = Schema.derivedSchema
-}

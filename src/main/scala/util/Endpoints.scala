@@ -1,29 +1,25 @@
 package util
 
-import api.{CreateChatRequest, JoinChatRequest, ListSessionsResponse}
+import api.ListSessionsResponse
+import fs2.Pipe
+import sttp.capabilities.WebSockets
+import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.StatusCode
 import sttp.tapir.json.circe.jsonBody
-import sttp.tapir.{Endpoint, endpoint, statusCode, stringBody}
+import sttp.tapir._
+import sttp.ws.WebSocketFrame
 
 object Endpoints {
 
-  private val base: Endpoint[Unit, (StatusCode, String), Unit, Any] =
+  private val base: PublicEndpoint[Unit, (StatusCode, String), Unit, Any] =
     endpoint.errorOut(statusCode).errorOut(stringBody)
 
   // ChatRouter
-  val sessions: Endpoint[Unit, (StatusCode, String), ListSessionsResponse, Any] =
+  val sessions: PublicEndpoint[Unit, (StatusCode, String), ListSessionsResponse, Any] =
     base.get
       .in("sessions")
       .out(jsonBody[ListSessionsResponse])
 
-  val createChat: Endpoint[CreateChatRequest, (StatusCode, String), Unit, Any] =
-    base.post
-      .in("createChat")
-      .in(jsonBody[CreateChatRequest])
-
-  val joinChat: Endpoint[JoinChatRequest, (StatusCode, String), Unit, Any] =
-    base.post
-      .in("joinChat")
-      .in(jsonBody[JoinChatRequest])
-
+  def wsEndpoint[F[_]]: PublicEndpoint[Unit, (StatusCode, String), Pipe[F, WebSocketFrame, WebSocketFrame], Fs2Streams[F] with WebSockets] =
+    base.get.in("ws").out(webSocketBodyRaw(Fs2Streams[F]))
 }

@@ -2,9 +2,9 @@ import cats.effect._
 import cats.effect.std.Queue
 import cats.implicits._
 import configs.ServerConfig
-import controllers.{ChatRouter, SomeRouter}
+import controllers.ChatRouter
 import fs2.concurrent.Topic
-import models.{InputMessage, OutChatMessage, OutputMessage}
+import models.{AppState, InputMessage, OutChatMessage, OutputMessage}
 import org.http4s._
 import org.http4s.blaze.server._
 import org.http4s.implicits.http4sKleisliResponseSyntaxOptionT
@@ -25,17 +25,14 @@ object Main extends IOApp {
     for {
       serverConf   <-
         Concurrent[F].delay(ConfigSource.default.loadOrThrow[ServerConfig]) <* Logger[F].info("Loaded server config")
-      chatQueue    <- Queue.unbounded[F, InputMessage] // TODO POK-3 Разобраться, надо ли использовать Queue (скорее всего надо)
+      chatQueue    <- Queue.unbounded[F, InputMessage]
       streamFromChatQueue = Stream.fromQueueUnterminated(chatQueue)
       chatTopic    <- Topic[F, OutputMessage]
-      routes        = httpApp(chatQueue, chatTopic)
+      appState     <- Ref[F].of(AppState.empty)
+      routes        = httpApp(chatQueue, chatTopic, appState)
       queueStream   =
-        // Достаем из очереди InputMessage
         streamFromChatQueue
-          // Пока что план такой:
-          //    Тут будем обрабатывать InputMessage, преобразовывать в OutputMessage
           .map(inputMessage => OutChatMessage(inputMessage.stringify))
-          //        и отправлять в topic
           .through(chatTopic.publish)
       serverStream <-
         fs2.Stream(httpServer(serverConf, routes), queueStream).parJoinUnbounded.compile.drain.as(ExitCode.Success)
@@ -55,8 +52,6 @@ object Main extends IOApp {
       topic: Topic[F, OutputMessage],
       state: Ref[F, AppState]
   ) = {
-    val someService = new SomeService[F]
-
     val chatRouter = new ChatRouter[F](queue, topic, state)
 
     val routers = List(chatRouter)
