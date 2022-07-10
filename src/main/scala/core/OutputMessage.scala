@@ -1,4 +1,6 @@
-package models
+package core
+
+import models.UserId
 
 // Исходящие сообщения, которые получат пользователи
 trait OutputMessage {

@@ -5,8 +5,9 @@ import cats.effect.std.Queue
 import cats.effect.{Async, Ref}
 import cats.implicits._
 import cats.{Functor, Monad}
+import core.{AppState, Disconnect, InputMessage, OutputMessage}
+import fs2.Pipe
 import fs2.concurrent.Topic
-import fs2.{Pipe, Stream}
 import models._
 import org.http4s.dsl.Http4sDsl
 import org.typelevel.log4cats.Logger
@@ -15,7 +16,6 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.server.ServerEndpoint
 import sttp.ws.WebSocketFrame
 import sttp.ws.WebSocketFrame.{Close, Text}
-import util.Endpoints
 
 class ChatRouter[F[_]: Async: Logger: Functor: Monad](
     queue: Queue[F, InputMessage],

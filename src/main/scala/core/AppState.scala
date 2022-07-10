@@ -1,4 +1,6 @@
-package models
+package core
+
+import models.{SessionId, UserId}
 
 case class AppState(sessions: Map[SessionId, Set[UserId]]) {
 
@@ -8,7 +10,7 @@ case class AppState(sessions: Map[SessionId, Set[UserId]]) {
 
     inputMessage match {
       case GlobalMessage(text) =>
-        this -> allUsers.map(ToUser(_, text))
+        this -> allUsers.map(core.ToUser(_, text))
 
       case ChatMessage(fromUser, text) =>
         this -> getUserSession(fromUser).map(sendToChat(_, text)).toSeq.flatten
@@ -19,7 +21,7 @@ case class AppState(sessions: Map[SessionId, Set[UserId]]) {
 
       case Leave(userId) =>
         val nextState = getUserSession(userId).map(removeUserFromSession(_, userId)).getOrElse(this)
-        nextState -> Seq(ToUsers(allUsers, s"User $userId has left"))
+        nextState -> Seq(ToUsers(nextState.allUsers, s"User $userId has left"))
 
       case Help() =>
         this -> testMessage
@@ -30,7 +32,7 @@ case class AppState(sessions: Map[SessionId, Set[UserId]]) {
   }
 
   def sendToChat(sessionId: SessionId, text: String): Seq[OutputMessage] =
-    sessions(sessionId).toSeq.map(ToUser(_, text))
+    sessions(sessionId).toSeq.map(core.ToUser(_, text))
 
   def addUserToSession(sessionId: SessionId, userId: UserId): AppState =
     modifySessionUsers(sessionId, userId, sessions(sessionId).incl)

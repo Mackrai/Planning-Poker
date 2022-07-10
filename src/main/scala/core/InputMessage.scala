@@ -1,4 +1,6 @@
-package models
+package core
+
+import models.{SessionId, UserId}
 
 // Входящие в систему сообщения
 sealed trait InputMessage {

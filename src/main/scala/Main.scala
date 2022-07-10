@@ -3,9 +3,9 @@ import cats.effect.std.Queue
 import cats.implicits._
 import configs.ServerConfig
 import controllers.ChatRouter
+import core.{AppState, InputMessage, OutputMessage}
 import fs2.Stream
 import fs2.concurrent.Topic
-import models.{AppState, InputMessage, OutputMessage}
 import org.http4s._
 import org.http4s.blaze.server._
 import org.http4s.implicits.http4sKleisliResponseSyntaxOptionT
