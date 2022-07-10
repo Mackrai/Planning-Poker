@@ -24,13 +24,14 @@ class ChatRouter[F[_]: Async: Logger: Functor: Monad](
 ) extends Router[F]
     with Http4sDsl[F] {
 
-  private val toClient: Stream[F, WebSocketFrame] =
-    topic
-      .subscribe(1000)
-//      .filter(_.forUsers) TODO
-      .map(msg => Text(msg.stringify, finalFragment = true, None))
+  private def inputToOutput(user: String): Pipe[F, WebSocketFrame, WebSocketFrame] = {
+    val toClient =
+      topic
+        .subscribe(1000)
+        .filter(_.forUser(UserId(user)))
+        .map(msg => Text(msg.stringify, finalFragment = true, None))
 
-  private val inputToOutput: Pipe[F, WebSocketFrame, WebSocketFrame] =
+    println("inputToOutput")
     _.collect {
       case Text(text, _, _) => InputMessage.parse(text)
       case Close(_, _)      => Disconnect()
@@ -38,9 +39,10 @@ class ChatRouter[F[_]: Async: Logger: Functor: Monad](
       .evalTap(msg => Logger[F].info(msg.toString))
       .evalTap(queue.offer)
       .flatMap(_ => toClient)
+  }
 
   private val websocket: ServerEndpoint[Fs2Streams[F] with capabilities.WebSockets, F] =
-    Endpoints.wsEndpoint[F].serverLogicSuccess[F](_ => Async[F].pure(inputToOutput))
+    Endpoints.wsEndpoint[F].serverLogicSuccess[F](user => Async[F].pure(inputToOutput(user)))
 
   private val sessions: ServerEndpoint[Any, F] =
     Endpoints.sessions.serverLogic { _ =>

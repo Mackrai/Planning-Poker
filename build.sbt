@@ -9,10 +9,13 @@ lazy val root =
       libraryDependencies ++= Seq(
         cats,
         catsEffect,
+        catsEffectScalaTest,
         circe,
         logback % Runtime,
         log4cats,
         pureConfig,
+        scalactic,
+        scalatest,
         fs2
       ) ++ http4s ++ tapir,
       addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),

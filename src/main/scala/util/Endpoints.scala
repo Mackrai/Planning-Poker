@@ -20,6 +20,6 @@ object Endpoints {
       .in("sessions")
       .out(jsonBody[ListSessionsResponse])
 
-  def wsEndpoint[F[_]]: PublicEndpoint[Unit, (StatusCode, String), Pipe[F, WebSocketFrame, WebSocketFrame], Fs2Streams[F] with WebSockets] =
-    base.get.in("ws").out(webSocketBodyRaw(Fs2Streams[F]))
+  def wsEndpoint[F[_]]: PublicEndpoint[String, (StatusCode, String), Pipe[F, WebSocketFrame, WebSocketFrame], Fs2Streams[F] with WebSockets] =
+    base.get.in("ws").in(path[String]("user")).out(webSocketBodyRaw(Fs2Streams[F]))
 }

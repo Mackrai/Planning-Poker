@@ -33,6 +33,8 @@ object Main extends IOApp {
         Stream
           .fromQueueUnterminated(chatQueue)
           .evalMap(inputMsg => appState.modify(_.processInputMessage(inputMsg)))
+          .flatMap(Stream.emits)
+          .evalTap(outputMessage => Logger[F].info(outputMessage.stringify))
           .through(chatTopic.publish)
 
       serverStream <-
@@ -47,7 +49,6 @@ object Main extends IOApp {
     BlazeServerBuilder[F]
       .bindHttp(conf.port, conf.host)
       .withHttpWebSocketApp(wsb => routesApp(wsb).orNotFound)
-      .withSocketKeepAlive(true)
       .serve
 
   private def httpApp[F[_]: Async: Logger](

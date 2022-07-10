@@ -5,9 +5,14 @@ sealed trait InputMessage {
   def stringify: String
 }
 
-//   Простой текст
-case class ChatMessage(message: String) extends InputMessage {
-  override def stringify: String = message
+//   текст
+case class GlobalMessage(text: String) extends InputMessage {
+  override def stringify: String = text
+}
+
+//   /chat текст
+case class ChatMessage(fromUser: UserId, text: String) extends InputMessage {
+  override def stringify: String = text
 }
 
 //   /join sessionsId userId
@@ -34,10 +39,11 @@ object InputMessage {
 
   def parse(raw: String): InputMessage =
     parseCommand(raw) match {
-      case ("/join", session, user, _) => Join(SessionId(session), UserId(user))
-      case ("/leave", user, _, _)      => Leave(UserId(user))
-      case ("/help", _, _, _)          => Help()
-      case _                           => ChatMessage(raw)
+      case ("/join", session, user, _)  => Join(SessionId(session), UserId(user))
+      case ("/leave", user, _, _)       => Leave(UserId(user))
+      case ("/help", _, _, _)           => Help()
+      case ("/chat", fromUser, text, _) => ChatMessage(UserId(fromUser), text)
+      case _                            => GlobalMessage(raw)
     }
 
   private def firstWord(raw: String): (String, String) = {
