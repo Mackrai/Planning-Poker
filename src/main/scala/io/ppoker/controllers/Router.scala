@@ -1,4 +1,4 @@
-package controllers
+package io.ppoker.controllers
 
 import sttp.capabilities
 import sttp.capabilities.fs2.Fs2Streams

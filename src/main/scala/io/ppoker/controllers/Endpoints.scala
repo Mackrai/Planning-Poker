@@ -1,7 +1,7 @@
-package controllers
+package io.ppoker.controllers
 
-import api.ListSessionsResponse
 import fs2.Pipe
+import io.ppoker.api.ListSessionsResponse
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.StatusCode

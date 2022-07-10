@@ -1,4 +1,4 @@
-package models
+package io.ppoker.models
 
 import io.circe.Codec
 import io.circe.generic.semiauto.deriveCodec

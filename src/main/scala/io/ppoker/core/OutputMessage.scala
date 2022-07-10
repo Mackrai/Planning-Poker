@@ -1,10 +1,10 @@
-package core
+package io.ppoker.core
 
-import models.UserId
+import io.ppoker.models.UserId
 
 // Исходящие сообщения, которые получат пользователи
-trait OutputMessage {
-  def stringify: String
+trait OutputMessage extends Message {
+  override val messageType: MessageType = Outgoing
   def forUser(userId: UserId): Boolean
 }
 

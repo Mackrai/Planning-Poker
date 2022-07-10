@@ -1,40 +1,40 @@
-package core
+package io.ppoker.core
 
-import models.{SessionId, UserId}
+import io.ppoker.models.{SessionId, UserId}
 
 // Входящие в систему сообщения
-sealed trait InputMessage {
-  def stringify: String
+sealed trait InputMessage extends Message {
+  override val messageType: MessageType = Incoming
 }
 
 //   текст
 case class GlobalMessage(text: String) extends InputMessage {
-  override def stringify: String = text
+  override def stringify: String = this.toString
 }
 
 //   /chat текст
 case class ChatMessage(fromUser: UserId, text: String) extends InputMessage {
-  override def stringify: String = text
+  override def stringify: String = this.toString
 }
 
 //   /join sessionsId userId
 case class Join(sessionsId: SessionId, userId: UserId) extends InputMessage {
-  override def stringify: String = s"/join $sessionsId $userId"
+  override def stringify: String = this.toString
 }
 
 //   /leave userId
 case class Leave(userId: UserId) extends InputMessage {
-  override def stringify: String = s"/leave $userId"
+  override def stringify: String = this.toString
 }
 
 //   /help
 case class Help() extends InputMessage {
-  override def stringify: String = "/help"
+  override def stringify: String = this.toString
 }
 
 //   При отключении сокета
 case class Disconnect() extends InputMessage {
-  override def stringify: String = "WS disconnected"
+  override def stringify: String = this.toString
 }
 
 object InputMessage {

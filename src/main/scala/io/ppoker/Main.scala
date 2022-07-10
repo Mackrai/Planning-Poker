@@ -1,14 +1,16 @@
+package io.ppoker
+
 import cats.effect._
 import cats.effect.std.Queue
 import cats.implicits._
-import configs.ServerConfig
-import controllers.ChatRouter
-import core.{AppState, InputMessage, OutputMessage}
 import fs2.Stream
 import fs2.concurrent.Topic
-import org.http4s._
-import org.http4s.blaze.server._
-import org.http4s.implicits.http4sKleisliResponseSyntaxOptionT
+import io.ppoker.configs.ServerConfig
+import io.ppoker.controllers.ChatRouter
+import io.ppoker.core.{AppState, InputMessage, OutputMessage}
+import io.ppoker.util.LoggerOps.LoggerOps
+import org.http4s.HttpRoutes
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.websocket.WebSocketBuilder2
 import org.typelevel.log4cats.Logger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
@@ -34,7 +36,7 @@ object Main extends IOApp {
           .fromQueueUnterminated(chatQueue)
           .evalMap(inputMsg => appState.modify(_.processInputMessage(inputMsg)))
           .flatMap(Stream.emits)
-          .evalTap(outputMessage => Logger[F].info(s"OUTGOING: [${outputMessage.stringify}]"))
+          .evalTap(Logger[F].logMessage)
           .through(chatTopic.publish)
 
       serverStream <-
@@ -60,4 +62,5 @@ object Main extends IOApp {
 
     Http4sServerInterpreter[F]().toWebSocketRoutes(List(chatRouter).flatMap(_.endpoints))
   }
+
 }

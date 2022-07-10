@@ -1,4 +1,4 @@
-package models
+package io.ppoker.models
 
 import java.util.UUID
 

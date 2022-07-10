@@ -1,14 +1,15 @@
-package controllers
+package io.ppoker.controllers
 
-import api.SessionIdsDTO
 import cats.effect.std.Queue
 import cats.effect.{Async, Ref}
 import cats.implicits._
 import cats.{Functor, Monad}
-import core.{AppState, Disconnect, InputMessage, OutputMessage}
 import fs2.Pipe
 import fs2.concurrent.Topic
-import models._
+import io.ppoker.api._
+import io.ppoker.core.{AppState, Disconnect, InputMessage, OutputMessage}
+import io.ppoker.models.UserId
+import io.ppoker.util.LoggerOps.LoggerOps
 import org.http4s.dsl.Http4sDsl
 import org.typelevel.log4cats.Logger
 import sttp.capabilities
@@ -35,7 +36,7 @@ class ChatRouter[F[_]: Async: Logger: Functor: Monad](
       case Text(text, _, _) => InputMessage.parse(text)
       case Close(_, _)      => Disconnect()
     }
-      .evalTap(msg => Logger[F].info(s"INCOMING: [${msg.toString}]"))
+      .evalTap(Logger[F].logMessage)
       .evalTap(queue.offer)
       .flatMap(_ => toClient)
   }
@@ -46,7 +47,7 @@ class ChatRouter[F[_]: Async: Logger: Functor: Monad](
   private val sessions: ServerEndpoint[Any, F] =
     Endpoints.sessions.serverLogic { _ =>
       appState.get.map { state =>
-        api.ListSessionsResponse(state.sessions.toSeq.map(x => SessionIdsDTO(x._1.raw, x._2.map(_.raw).toSeq))).asRight
+        ListSessionsResponse(state.sessions.toSeq.map(x => SessionIdsDTO(x._1.raw, x._2.map(_.raw).toSeq))).asRight
       }
     }
 

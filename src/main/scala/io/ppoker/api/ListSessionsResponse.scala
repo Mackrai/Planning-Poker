@@ -1,4 +1,4 @@
-package api
+package io.ppoker.api
 
 import io.circe.Codec
 import io.circe.generic.semiauto.deriveCodec

@@ -1,4 +1,4 @@
-package configs
+package io.ppoker.configs
 
 import pureconfig._
 import pureconfig.generic.semiauto.deriveReader

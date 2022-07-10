@@ -1,6 +1,6 @@
-package core
+package io.ppoker.core
 
-import models.{SessionId, UserId}
+import io.ppoker.models.{SessionId, UserId}
 
 case class AppState(sessions: Map[SessionId, Set[UserId]]) {
 
@@ -10,7 +10,7 @@ case class AppState(sessions: Map[SessionId, Set[UserId]]) {
 
     inputMessage match {
       case GlobalMessage(text) =>
-        this -> allUsers.map(core.ToUser(_, text))
+        this -> allUsers.map(ToUser(_, text))
 
       case ChatMessage(fromUser, text) =>
         this -> getUserSession(fromUser).map(sendToChat(_, text)).toSeq.flatten
@@ -32,7 +32,7 @@ case class AppState(sessions: Map[SessionId, Set[UserId]]) {
   }
 
   def sendToChat(sessionId: SessionId, text: String): Seq[OutputMessage] =
-    sessions(sessionId).toSeq.map(core.ToUser(_, text))
+    sessions(sessionId).toSeq.map(ToUser(_, text))
 
   def addUserToSession(sessionId: SessionId, userId: UserId): AppState =
     modifySessionUsers(sessionId, userId, sessions(sessionId).incl)
