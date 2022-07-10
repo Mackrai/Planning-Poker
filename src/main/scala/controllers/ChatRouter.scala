@@ -35,7 +35,7 @@ class ChatRouter[F[_]: Async: Logger: Functor: Monad](
       case Text(text, _, _) => InputMessage.parse(text)
       case Close(_, _)      => Disconnect()
     }
-      .evalTap(msg => Logger[F].info(msg.toString))
+      .evalTap(msg => Logger[F].info(s"INCOMING: [${msg.toString}]"))
       .evalTap(queue.offer)
       .flatMap(_ => toClient)
   }

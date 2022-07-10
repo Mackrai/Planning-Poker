@@ -26,7 +26,7 @@ object Main extends IOApp {
         Concurrent[F].delay(ConfigSource.default.loadOrThrow[ServerConfig]) <* Logger[F].info("Loaded server config")
       chatQueue  <- Queue.unbounded[F, InputMessage]
       chatTopic  <- Topic[F, OutputMessage]
-      appState   <- Ref[F].of(AppState.test)
+      appState   <- Ref[F].of(AppState.singleSession)
       routes      = httpApp(chatQueue, chatTopic, appState)
 
       queueStream =
@@ -34,7 +34,7 @@ object Main extends IOApp {
           .fromQueueUnterminated(chatQueue)
           .evalMap(inputMsg => appState.modify(_.processInputMessage(inputMsg)))
           .flatMap(Stream.emits)
-          .evalTap(outputMessage => Logger[F].info(outputMessage.stringify))
+          .evalTap(outputMessage => Logger[F].info(s"OUTGOING: [${outputMessage.stringify}]"))
           .through(chatTopic.publish)
 
       serverStream <-

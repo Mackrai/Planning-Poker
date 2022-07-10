@@ -21,5 +21,5 @@ object Endpoints {
       .out(jsonBody[ListSessionsResponse])
 
   def wsEndpoint[F[_]]: PublicEndpoint[String, (StatusCode, String), Pipe[F, WebSocketFrame, WebSocketFrame], Fs2Streams[F] with WebSockets] =
-    base.get.in("ws").in(path[String]("user")).out(webSocketBodyRaw(Fs2Streams[F]))
+    base.get.in("ws").in(query[String]("user")).out(webSocketBodyRaw(Fs2Streams[F]))
 }

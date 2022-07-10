@@ -15,7 +15,7 @@ case class AppState(sessions: Map[SessionId, Set[UserId]]) {
 
       case Join(sessionId, userId) =>
         val nextState = addUserToSession(sessionId, userId)
-        nextState -> Seq(ToUsers(allUsers, s"User $userId has joined"))
+        nextState -> Seq(ToUsers(nextState.allUsers, s"User $userId has joined"))
 
       case Leave(userId) =>
         val nextState = getUserSession(userId).map(removeUserFromSession(_, userId)).getOrElse(this)
@@ -38,7 +38,7 @@ case class AppState(sessions: Map[SessionId, Set[UserId]]) {
   def removeUserFromSession(sessionId: SessionId, userId: UserId): AppState =
     modifySessionUsers(sessionId, userId, sessions(sessionId).excl)
 
-  private def allUsers: Seq[UserId] = sessions.values.toSeq.flatMap(_.toSeq)
+  def allUsers: Seq[UserId] = sessions.values.toSeq.flatMap(_.toSeq)
 
   private def modifySessionUsers(sessionId: SessionId, userId: UserId, addOrRemove: UserId => Set[UserId]): AppState =
     this.copy(sessions = sessions + (sessionId -> addOrRemove(userId)))
@@ -49,6 +49,9 @@ case class AppState(sessions: Map[SessionId, Set[UserId]]) {
 
 object AppState {
   lazy val empty: AppState = AppState(sessions = Map.empty)
+
+  lazy val singleSession: AppState =
+    AppState(sessions = Map(SessionId("f3447dcb-6536-4aab-b2cf-068602b39d64") -> Set.empty))
 
   lazy val test: AppState =
     AppState(sessions = Map(SessionId() -> Set(UserId(), UserId()), SessionId() -> Set(UserId(), UserId())))
