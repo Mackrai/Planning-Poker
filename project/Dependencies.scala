@@ -7,13 +7,13 @@ object Dependencies {
     val catsEffect          = "3.3.8"
     val catsEffectScalaTest = "1.4.0"
     val circe               = "0.14.1"
-    val http4s              = "0.23.11"
+    val http4s              = "0.23.12"
     val logback             = "1.2.11"
     val log4cats            = "2.2.0"
     val pureConfig          = "0.17.1"
     val scalatest           = "3.2.12"
-    val tapir               = "1.0.0-M2"
-    val fs2                 = "3.2.5"
+    val tapir               = "1.0.1"
+    val fs2                 = "3.2.10"
   }
 
   val cats                = "org.typelevel" %% "cats-core"                     % Version.cats
