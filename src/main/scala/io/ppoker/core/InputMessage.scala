@@ -33,7 +33,7 @@ case class Help() extends InputMessage {
 }
 
 //   При отключении сокета
-case class Disconnect() extends InputMessage {
+case class Disconnect(userId: UserId) extends InputMessage {
   override def stringify: String = this.toString
 }
 

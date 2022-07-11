@@ -4,10 +4,7 @@ import io.ppoker.models.{SessionId, UserId}
 
 case class AppState(sessions: Map[SessionId, Set[UserId]]) {
 
-  def processInputMessage(inputMessage: InputMessage): (AppState, Seq[OutputMessage]) = {
-    // for debug
-    val testMessage = Seq(ToUsers(allUsers, "Test message"))
-
+  def processInputMessage(inputMessage: InputMessage): (AppState, Seq[OutputMessage]) =
     inputMessage match {
       case GlobalMessage(text) =>
         this -> allUsers.map(ToUser(_, text))
@@ -19,33 +16,34 @@ case class AppState(sessions: Map[SessionId, Set[UserId]]) {
         val nextState = addUserToSession(sessionId, userId)
         nextState -> Seq(ToUsers(nextState.allUsers, s"User $userId has joined"))
 
-      case Leave(userId) =>
-        val nextState = getUserSession(userId).map(removeUserFromSession(_, userId)).getOrElse(this)
-        nextState -> Seq(ToUsers(nextState.allUsers, s"User $userId has left"))
+      case Leave(userId) => disconnectUser(userId)
 
       case Help() =>
-        this -> testMessage
+        this -> Seq(ToUsers(allUsers, "Test message"))
 
-      case Disconnect() =>
-        this -> testMessage
+      case Disconnect(userId) => disconnectUser(userId)
     }
-  }
 
-  def sendToChat(sessionId: SessionId, text: String): Seq[OutputMessage] =
+  private def allUsers: Seq[UserId] = sessions.values.toSeq.flatMap(_.toSeq)
+
+  private def getUserSession(userId: UserId): Option[SessionId] = sessions.find(_._2.contains(userId)).map(_._1)
+
+  private def sendToChat(sessionId: SessionId, text: String): Seq[OutputMessage] =
     sessions(sessionId).toSeq.map(ToUser(_, text))
-
-  def addUserToSession(sessionId: SessionId, userId: UserId): AppState =
-    modifySessionUsers(sessionId, userId, sessions(sessionId).incl)
-
-  def removeUserFromSession(sessionId: SessionId, userId: UserId): AppState =
-    modifySessionUsers(sessionId, userId, sessions(sessionId).excl)
-
-  def allUsers: Seq[UserId] = sessions.values.toSeq.flatMap(_.toSeq)
 
   private def modifySessionUsers(sessionId: SessionId, userId: UserId, addOrRemove: UserId => Set[UserId]): AppState =
     this.copy(sessions = sessions + (sessionId -> addOrRemove(userId)))
 
-  private def getUserSession(userId: UserId): Option[SessionId] = sessions.find(_._2.contains(userId)).map(_._1)
+  private def addUserToSession(sessionId: SessionId, userId: UserId): AppState =
+    modifySessionUsers(sessionId, userId, sessions(sessionId).incl)
+
+  private def removeUserFromSession(sessionId: SessionId, userId: UserId): AppState =
+    modifySessionUsers(sessionId, userId, sessions(sessionId).excl)
+
+  private def disconnectUser(userId: UserId): (AppState, Seq[OutputMessage]) = {
+    val nextState = getUserSession(userId).map(removeUserFromSession(_, userId)).getOrElse(this)
+    nextState -> Seq(ToUsers(nextState.allUsers, s"User $userId has left"))
+  }
 
 }
 

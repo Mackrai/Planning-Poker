@@ -27,17 +27,17 @@ class ChatRouter[F[_]: Async: Logger: Functor: Monad](
 ) extends Router[F]
     with Http4sDsl[F] {
 
-  private def websocketLogic(user: String): F[Response[F]] = {
+  private def websocketLogic(user: UserId): F[Response[F]] = {
     val sentToClient: fs2.Stream[F, WebSocketFrame] =
       topic
         .subscribe(1000)
-        .filter(_.forUser(UserId(user)))
+        .filter(_.forUser(user))
         .map(msg => Text(msg.stringify))
 
     val receiveFromClient: Pipe[F, WebSocketFrame, Unit] =
       _.collect {
         case Text(text, _) => InputMessage.parse(text)
-        case Close(_)      => Disconnect()
+        case Close(_)      => Disconnect(user)
       }
         .evalTap(Logger[F].logMessage)
         .evalMap(queue.offer)
@@ -47,7 +47,7 @@ class ChatRouter[F[_]: Async: Logger: Functor: Monad](
 
   private val websocket: HttpRoutes[F] =
     HttpRoutes.of[F] { case _ @GET -> Root / "ws" / (user: String) =>
-      websocketLogic(user)
+      websocketLogic(UserId(user))
     }
 
   private val sessions: ServerEndpoint[Any, F] =

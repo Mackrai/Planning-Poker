@@ -39,12 +39,7 @@ object Main extends IOApp {
             .evalTap(Logger[F].logMessage)
             .through(chatTopic.publish)
 
-        fs2
-          .Stream(httpServerStream, processingStream)
-          .parJoinUnbounded
-          .compile
-          .drain
-          .as(ExitCode.Success)
+        Stream(httpServerStream, processingStream).parJoinUnbounded.compile.drain.as(ExitCode.Success)
       }
     } yield exitCode
   }
