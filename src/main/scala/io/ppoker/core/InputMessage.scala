@@ -1,67 +1,51 @@
 package io.ppoker.core
 
+import io.circe.generic.semiauto.deriveDecoder
+import io.circe.{Decoder, DecodingFailure, HCursor}
 import io.ppoker.models.{SessionId, UserId}
 
-// Входящие в систему сообщения
 sealed trait InputMessage extends Message {
   override val messageType: MessageType = Incoming
 }
 
-//   текст
-case class GlobalMessage(text: String) extends InputMessage {
-  override def stringify: String = this.toString
-}
-
-//   /chat текст
-case class ChatMessage(fromUser: UserId, text: String) extends InputMessage {
-  override def stringify: String = this.toString
-}
-
-//   /join sessionsId userId
-case class Join(sessionsId: SessionId, userId: UserId) extends InputMessage {
-  override def stringify: String = this.toString
-}
-
-//   /leave userId
-case class Leave(userId: UserId) extends InputMessage {
-  override def stringify: String = this.toString
-}
-
-//   /help
-case class Help() extends InputMessage {
-  override def stringify: String = this.toString
-}
-
-//   При отключении сокета
-case class Disconnect(userId: UserId) extends InputMessage {
-  override def stringify: String = this.toString
-}
-
 object InputMessage {
-
-  def parse(raw: String): InputMessage =
-    parseCommand(raw) match {
-      case ("/join", session, user, _)  => Join(SessionId(session), UserId(user))
-      case ("/leave", user, _, _)       => Leave(UserId(user))
-      case ("/help", _, _, _)           => Help()
-      case ("/chat", fromUser, text, _) => ChatMessage(UserId(fromUser), text)
-      case _                            => GlobalMessage(raw)
-    }
-
-  private def firstWord(raw: String): (String, String) = {
-    val trimmed    = raw.trim
-    val firstSpace = trimmed.indexOf(' ')
-    if (firstSpace <= 0)
-      (trimmed, "")
-    else
-      trimmed.splitAt(firstSpace)
-  }
-
-  private def parseCommand(raw: String): (String, String, String, String) = {
-    val (command, arg1WithTail) = firstWord(raw)
-    val (arg1, arg2withTail)    = firstWord(arg1WithTail)
-    val (arg2, tail)            = firstWord(arg2withTail)
-    (command, arg1, arg2, tail.trim)
-  }
-
+  implicit val decoder: Decoder[InputMessage] =
+    (c: HCursor) =>
+      c.get[String]("command").flatMap {
+        case "addTask"    => c.get[AddTask]("args")
+        case "join"       => c.get[Join]("args")
+        case "leave"      => c.get[Leave]("args")
+        case "chat"       => c.get[ChatMessage]("args")
+        case "globalChat" => c.get[GlobalMessage]("args")
+        case command      => Left(DecodingFailure(s"Invalid command: [$command]", Nil))
+      }
 }
+
+case class AddTask(sessionId: SessionId,
+                   title: String,
+                   description: Option[String]) extends InputMessage
+object AddTask {
+  implicit val decoder: Decoder[AddTask] = deriveDecoder
+}
+
+case class GlobalMessage(text: String) extends InputMessage
+object GlobalMessage {
+  implicit val decoder: Decoder[GlobalMessage] = deriveDecoder
+}
+
+case class ChatMessage(fromUser: UserId, text: String) extends InputMessage
+object ChatMessage {
+  implicit val decoder: Decoder[ChatMessage] = deriveDecoder
+}
+
+case class Join(userId: UserId, sessionId: SessionId) extends InputMessage
+object Join {
+  implicit val decoder: Decoder[Join] = deriveDecoder
+}
+
+case class Leave(userId: UserId) extends InputMessage
+object Leave {
+  implicit val decoder: Decoder[Leave] = deriveDecoder
+}
+
+case class Disconnect(userId: UserId) extends InputMessage

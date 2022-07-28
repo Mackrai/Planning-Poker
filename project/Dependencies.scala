@@ -7,6 +7,7 @@ object Dependencies {
     val catsEffect          = "3.3.8"
     val catsEffectScalaTest = "1.4.0"
     val circe               = "0.14.1"
+    val doobie              = "1.0.0-RC1"
     val http4s              = "0.23.12"
     val logback             = "1.2.11"
     val log4cats            = "2.2.0"
@@ -23,7 +24,17 @@ object Dependencies {
   val scalactic = "org.scalactic" %% "scalactic" % Version.scalatest
   val scalatest = "org.scalatest" %% "scalatest" % Version.scalatest % "test"
 
-  val circe = "io.circe" %% "circe-generic" % Version.circe
+  val circe: Seq[ModuleID] = Seq(
+    "io.circe" %% "circe-core",
+    "io.circe" %% "circe-generic",
+    "io.circe" %% "circe-parser",
+    "io.circe" %% "circe-generic-extras"
+  ).map(_ % Version.circe)
+
+  val doobie: Seq[ModuleID] = Seq(
+    "org.tpolecat" %% "doobie-core",
+    "org.tpolecat" %% "doobie-postgres"
+  ).map(_ % Version.doobie)
 
   val fs2 = "co.fs2" %% "fs2-core" % Version.fs2
 

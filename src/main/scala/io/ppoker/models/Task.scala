@@ -4,6 +4,7 @@ import java.util.UUID
 
 case class Task(
     id: TaskId = TaskId(),
+    session: SessionId,
     title: String,
     description: Option[String] = None,
     userVotes: Map[User, Int] = Map.empty,
