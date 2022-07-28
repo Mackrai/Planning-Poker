@@ -1,6 +1,6 @@
 package io.ppoker.models
 
-import io.circe.{Decoder, HCursor}
+import io.circe.Decoder
 
 import java.util.UUID
 
@@ -15,5 +15,5 @@ case class Session(
 case class SessionId(raw: String = UUID.randomUUID().toString) extends AnyVal
 
 object SessionId {
-  implicit val decoder: Decoder[SessionId] = (c: HCursor) => c.as[String].map(SessionId.apply)
+  implicit val decoder: Decoder[SessionId] = _.as[String].map(SessionId.apply)
 }
