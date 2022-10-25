@@ -3,11 +3,14 @@ package io.ppoker
 import cats.effect._
 import cats.effect.std.Queue
 import cats.implicits._
+import doobie.util.transactor.Transactor
 import fs2.Stream
 import fs2.concurrent.Topic
 import io.ppoker.configs.{AppConfig, ServerConfig}
 import io.ppoker.controllers._
 import io.ppoker.core.{AppState, InputMessage, OutputMessage}
+import io.ppoker.models.Auth
+import io.ppoker.services.AuthService
 import io.ppoker.util.Implicits.Logger.LoggerOps
 import org.http4s.HttpRoutes
 import org.http4s.blaze.server.BlazeServerBuilder
@@ -24,6 +27,11 @@ object Main extends IOApp {
     implicit val logger: Logger[F] = Slf4jLogger.getLogger[F]
     for {
       config <- Concurrent[F].delay(ConfigSource.default.loadOrThrow[AppConfig]) <* Logger[F].info("Loaded app config")
+      dbConfig = config.db
+
+      transactor = Transactor.fromDriverManager[F](dbConfig.driver, dbConfig.url, dbConfig.user, dbConfig.pass)
+
+      authService = AuthService(transactor)
 
       chatQueue <- Queue.unbounded[F, InputMessage]
       chatTopic <- Topic[F, OutputMessage]

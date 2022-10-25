@@ -32,14 +32,16 @@ class ChatRouter[F[_]: Async: Logger: Functor: Monad](
     val sentToClient: fs2.Stream[F, WebSocketFrame] =
       topic
         .subscribe(1000)
+        // Check if message is intended for this client. If not - skip it
         .filter(_.forUser(userId))
-        .map(msg => Text(msg.toString)) //todo toJson
+        .map(msg => Text(msg.toString)) // TODO toJson
 
     val receiveFromClient: Pipe[F, WebSocketFrame, Unit] =
       _.collect { case Text(text, _) => parse(text).flatMap(_.as[InputMessage]) }
         .flatMap(fs2.Stream.fromEither[F](_))
         .evalTap(Logger[F].logMessage)
         .evalMap(queue.offer)
+        // Ensure Disconnect message is put into queue in case of connection termination
         .onFinalize {
           appState.get.map { state =>
             if (state.userIsConnected(userId)) {
