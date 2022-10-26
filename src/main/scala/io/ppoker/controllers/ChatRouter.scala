@@ -28,41 +28,41 @@ class ChatRouter[F[_]: Async: Logger: Functor: Monad](
 ) extends Router[F]
     with Http4sDsl[F] {
 
-  private def websocketLogic(userId: UserId): F[Response[F]] = {
-    val sentToClient: fs2.Stream[F, WebSocketFrame] =
-      topic
-        .subscribe(1000)
-        // Check if message is intended for this client. If not - skip it
-        .filter(_.forUser(userId))
-        .map(msg => Text(msg.toString)) // TODO toJson
-
-    val receiveFromClient: Pipe[F, WebSocketFrame, Unit] =
-      _.collect { case Text(text, _) => parse(text).flatMap(_.as[InputMessage]) }
-        .flatMap(fs2.Stream.fromEither[F](_))
-        .evalTap(Logger[F].logMessage)
-        .evalMap(queue.offer)
-        // Ensure Disconnect message is put into queue in case of connection termination
-        .onFinalize {
-          appState.get.map { state =>
-            if (state.userIsConnected(userId)) {
-              val disconnectMsg = Disconnect(userId)
-              Logger[F].logMessage(disconnectMsg) >> queue.offer(disconnectMsg)
-            }
-          }
-        }
-
-    webSocketBuilder2.build(sentToClient, receiveFromClient)
-  }
-
   private val websocket: HttpRoutes[F] =
     HttpRoutes.of[F] { case _ @GET -> Root / "ws" / (user: String) =>
-      websocketLogic(UserId(user))
+      val userId = UserId(user)
+
+      val sentToClient: fs2.Stream[F, WebSocketFrame] =
+        topic
+          .subscribe(1000)
+          // Check if message is intended for this client. If not - skip it
+          .filter(_.forUser(userId))
+          .map(msg => Text(msg.toString)) // TODO toJson
+
+      val receiveFromClient: Pipe[F, WebSocketFrame, Unit] =
+        _.collect { case Text(text, _) => parse(text).flatMap(_.as[InputMessage]) }
+          .flatMap(fs2.Stream.fromEither[F](_))
+          .evalTap(Logger[F].logMessage)
+          .evalMap(queue.offer)
+          // Ensure Disconnect message is put into queue in case of connection termination
+          .onFinalize {
+            appState.get.map { state =>
+              if (state.userIsConnected(userId)) {
+                val disconnectMsg = Disconnect(userId)
+                Logger[F].logMessage(disconnectMsg) >> queue.offer(disconnectMsg)
+              }
+            }
+          }
+
+      webSocketBuilder2.build(sentToClient, receiveFromClient)
     }
 
   private val sessions: ServerEndpoint[Any, F] =
     Endpoints.sessions.serverLogic { _ =>
       appState.get.map { state =>
-        ListSessionsResponse(state.sessions.toSeq.map(x => SessionIdsDTO(x._1.raw, x._2._1.map(_.raw).toSeq))).asRight
+        ListSessionsResponse(state.sessions.toSeq.map { case (session, (users, _)) =>
+          SessionIdsDTO(session.raw, users.map(_.raw).toSeq)
+        }).asRight
       }
     }
 

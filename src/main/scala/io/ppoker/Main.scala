@@ -38,7 +38,7 @@ object Main extends IOApp {
       appState  <- Ref[F].of(AppState.singleSession)
 
       exitCode <- {
-        val httpServerStream = httpServer(config.server, httpApp(chatQueue, chatTopic, appState))
+        val httpServerStream = httpServer(config.server, chatQueue, chatTopic, appState)
         val processingStream =
           Stream
             .fromQueueUnterminated(chatQueue)
@@ -53,22 +53,18 @@ object Main extends IOApp {
     } yield exitCode
   }
 
-  private def httpServer[F[_]: Async](
+  private def httpServer[F[_]: Async: Logger](
       conf: ServerConfig,
-      buildRoutes: WebSocketBuilder2[F] => HttpRoutes[F]
-  ): fs2.Stream[F, ExitCode] =
-    BlazeServerBuilder[F]
-      .bindHttp(conf.port, conf.host)
-      .withHttpWebSocketApp(buildRoutes(_).orNotFound)
-      .serve
-
-  private def httpApp[F[_]: Async: Logger](
       queue: Queue[F, InputMessage],
       topic: Topic[F, OutputMessage],
       state: Ref[F, AppState]
-  ): WebSocketBuilder2[F] => HttpRoutes[F] = { wsb =>
-    val chatRouter = new ChatRouter[F](wsb, queue, topic, state)
-    chatRouter.routes
-  }
+  ): fs2.Stream[F, ExitCode] =
+    BlazeServerBuilder[F]
+      .bindHttp(conf.port, conf.host)
+      .withHttpWebSocketApp { wsb =>
+        val chatRouter = new ChatRouter[F](wsb, queue, topic, state)
+        chatRouter.routes.orNotFound
+      }
+      .serve
 
 }
