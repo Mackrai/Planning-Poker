@@ -8,4 +8,12 @@ object Constant {
     val Observer = "Observer"
   }
 
+  object CommandTypes {
+    val AddTask       = "addTask"
+    val Join          = "join"
+    val Leave         = "leave"
+    val ChatMessage   = "chat"
+    val GlobalMessage = "globalChat"
+  }
+
 }

@@ -2,7 +2,12 @@ package io.ppoker.core
 
 import io.ppoker.models.{SessionId, Task, TaskId, UserId}
 
-case class AppState(sessions: Map[SessionId, (Set[UserId], Set[TaskId])]) {
+/**
+ * Single instance of this class is used in context of [[cats.effect.Ref]]
+ *
+ * for quick and concurrent access to list of ids of sessions, users and tasks.
+ */
+final case class AppState(sessions: Map[SessionId, (Set[UserId], Set[TaskId])]) {
 
   def processInputMessage(inputMessage: InputMessage): (AppState, Seq[OutputMessage]) =
     inputMessage match {
@@ -13,11 +18,9 @@ case class AppState(sessions: Map[SessionId, (Set[UserId], Set[TaskId])]) {
         val nextState = this.copy(sessions + (sessionId -> (users, tasks.incl(task.id))))
         nextState -> Seq()
 
-      case GlobalMessage(text) =>
-        this -> allUsers.map(ToUser(_, text))
+      case GlobalMessage(text) => this -> allUsers.map(ToUser(_, text))
 
-      case ChatMessage(fromUser, text) =>
-        this -> getUserSession(fromUser).map(sendToChat(_, text)).toSeq.flatten
+      case ChatMessage(fromUser, text) => this -> getUserSession(fromUser).map(sendToChat(_, text)).toSeq.flatten
 
       case Join(userId, sessionId) =>
         getUserSession(userId).collect {

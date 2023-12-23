@@ -1,5 +1,7 @@
 package io.ppoker.models
 
+import io.circe.Decoder
+
 import java.util.UUID
 
 case class Task(
@@ -15,3 +17,7 @@ case class Task(
 }
 
 case class TaskId(raw: String = UUID.randomUUID().toString) extends AnyVal
+
+object TaskId {
+  implicit val decoder: Decoder[TaskId] = _.as[String].map(TaskId.apply)
+}
