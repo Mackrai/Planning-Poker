@@ -1,26 +1,27 @@
 package io.ppoker.controllers
 
-import fs2.Pipe
-import io.ppoker.api.ListSessionsResponse
+import io.ppoker.models.UserId
 import sttp.capabilities.WebSockets
-import sttp.capabilities.fs2.Fs2Streams
-import sttp.model.StatusCode
-import sttp.tapir.json.circe.jsonBody
-import sttp.tapir.{PublicEndpoint, endpoint, query, statusCode, stringBody, webSocketBodyRaw}
+import sttp.capabilities.zio.ZioStreams
+import sttp.capabilities.zio.ZioStreams.Pipe
+import sttp.tapir.ztapir._
+import sttp.tapir.PublicEndpoint
 import sttp.ws.WebSocketFrame
+import zio.stream.ZStream
 
 object Endpoints {
 
-  private val base: PublicEndpoint[Unit, (StatusCode, String), Unit, Any] =
-    endpoint.errorOut(statusCode).errorOut(stringBody)
-
   // ChatRouter
-  val sessions: PublicEndpoint[Unit, (StatusCode, String), ListSessionsResponse, Any] =
-    base.get
-      .in("sessions")
-      .out(jsonBody[ListSessionsResponse])
+//  val sessions: PublicEndpoint[Unit, (StatusCode, String), ListSessionsResponse, Any] =
+//    base.get
+//      .in("sessions")
+//      .out(jsonBody[ListSessionsResponse])
 
-  def wsEndpoint[F[_]]: PublicEndpoint[String, (StatusCode, String), Pipe[F, WebSocketFrame, WebSocketFrame], Fs2Streams[F] with WebSockets] =
-    base.get.in("ws").in(query[String]("user")).out(webSocketBodyRaw(Fs2Streams[F]))
+  type ZPipe[R, A, B] = ZStream[R, Throwable, A] => ZStream[R, Throwable, B]
 
+  def wsEndpoint: PublicEndpoint[UserId, Unit, Pipe[WebSocketFrame, WebSocketFrame], ZioStreams with WebSockets] =
+    endpoint.get
+      .in("ws")
+      .in(query[UserId]("user"))
+      .out(webSocketBodyRaw(ZioStreams))
 }

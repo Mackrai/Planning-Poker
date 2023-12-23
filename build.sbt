@@ -7,16 +7,15 @@ lazy val root =
       version      := "0.1.0-SNAPSHOT",
       scalaVersion := "2.13.8",
       libraryDependencies ++= Seq(
-        cats,
-        catsEffect,
-        catsEffectScalaTest,
-        logback % Runtime,
-        log4cats,
-        pureConfig,
-        scalactic,
-        scalatest,
-        fs2
-      ) ++ circe ++ doobie ++ http4s ++ tapir,
+        zio,
+        zioLogging,
+        zioConfig,
+        circe,
+        doobie,
+        http4s,
+        tapir
+      ).flatten,
+      libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.4.7",
       addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
       scalacOptions ++= Seq(
         "-feature",
@@ -25,5 +24,4 @@ lazy val root =
         "-language:postfixOps",
         "-Ymacro-annotations"
       )
-
     )
