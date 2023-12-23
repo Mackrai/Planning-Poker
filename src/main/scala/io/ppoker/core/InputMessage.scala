@@ -12,11 +12,13 @@ import io.ppoker.util.Constant.CommandTypes
  *
  * Later, parsed messages are handled by [[AppState.processInputMessage]]
  * @example [[Join]] {{{
- * "command": "join",
- * "args": [
- *     "userId": "981d632a17054da1b2f525fbb667d9d1",
- *     "sessionId": "4dc9e514bc4846d6a17ceb8574c784f8"
- * ] }}}
+ * {
+ *    "command": "join",
+ *    "args": {
+ *        "userId": "981d632a17054da1b2f525fbb667d9d1",
+ *        "sessionId": "4dc9e514bc4846d6a17ceb8574c784f8"
+ *    } }}}
+ * }
  */
 sealed trait InputMessage extends Message {
   override val messageType: MessageType = Incoming

@@ -2,59 +2,59 @@ import sbt._
 
 object Dependencies {
 
-  object Version {
-    val cats                = "2.7.0"
-    val catsEffect          = "3.3.8"
-    val catsEffectScalaTest = "1.4.0"
-    val circe               = "0.14.1"
-    val doobie              = "1.0.0-RC1"
-    val http4s              = "0.23.12"
-    val logback             = "1.2.11"
-    val log4cats            = "2.2.0"
-    val pureConfig          = "0.17.1"
-    val scalatest           = "3.2.12"
-    val tapir               = "1.0.1"
-    val fs2                 = "3.2.10"
+  object V {
+    val zio        = "2.0.16"
+    val zioLogging = "2.0.0"
+    val zioConfig  = "4.0.0-RC14"
+    val circe      = "0.14.1"
+    val doobie     = "1.0.0-RC1"
+    val http4s     = "0.23.23"
+    val tapir      = "1.9.6"
   }
 
-  val cats                = "org.typelevel" %% "cats-core"                     % Version.cats
-  val catsEffect          = "org.typelevel" %% "cats-effect"                   % Version.catsEffect
-  val catsEffectScalaTest = "org.typelevel" %% "cats-effect-testing-scalatest" % Version.catsEffectScalaTest % Test
+  val zio: Seq[ModuleID] =
+    Seq(
+      "dev.zio" %% "zio"
+    ).map(_ % V.zio)
 
-  val scalactic = "org.scalactic" %% "scalactic" % Version.scalatest
-  val scalatest = "org.scalatest" %% "scalatest" % Version.scalatest % "test"
+  val zioLogging: Seq[ModuleID] =
+    Seq(
+      "dev.zio" %% "zio-logging",
+      "dev.zio" %% "zio-logging-slf4j"
+    ).map(_ % V.zioLogging)
+
+  val zioConfig: Seq[ModuleID] =
+    Seq(
+      "dev.zio" %% "zio-config",
+      "dev.zio" %% "zio-config-typesafe",
+      "dev.zio" %% "zio-config-magnolia"
+    ).map(_ % V.zioConfig)
 
   val circe: Seq[ModuleID] = Seq(
     "io.circe" %% "circe-core",
     "io.circe" %% "circe-generic",
     "io.circe" %% "circe-parser",
     "io.circe" %% "circe-generic-extras"
-  ).map(_ % Version.circe)
+  ).map(_ % V.circe)
 
   val doobie: Seq[ModuleID] = Seq(
     "org.tpolecat" %% "doobie-core",
     "org.tpolecat" %% "doobie-postgres"
-  ).map(_ % Version.doobie)
-
-  val fs2 = "co.fs2" %% "fs2-core" % Version.fs2
+  ).map(_ % V.doobie)
 
   val http4s: Seq[ModuleID] = Seq(
-    "http4s-blaze-server",
-    "http4s-blaze-client",
     "http4s-circe",
+    "http4s-ember-client",
+    "http4s-ember-server",
     "http4s-dsl"
-  ).map("org.http4s" %% _ % Version.http4s)
+  ).map("org.http4s" %% _ % V.http4s)
 
   val tapir: Seq[ModuleID] = Seq(
     "tapir-core",
+    "tapir-zio",
+    "tapir-zio-http-server",
     "tapir-json-circe",
-    "tapir-http4s-server",
+    "tapir-http4s-server-zio",
     "tapir-http4s-client"
-  ).map("com.softwaremill.sttp.tapir" %% _ % Version.tapir)
-
-  val logback = "ch.qos.logback" % "logback-classic" % Version.logback
-
-  val log4cats = "org.typelevel" %% "log4cats-slf4j" % Version.log4cats
-
-  val pureConfig = "com.github.pureconfig" %% "pureconfig" % Version.pureConfig
+  ).map("com.softwaremill.sttp.tapir" %% _ % V.tapir)
 }

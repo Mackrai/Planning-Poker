@@ -1,11 +1,19 @@
 package io.ppoker.configs
 
-import pureconfig.ConfigReader
-import pureconfig.generic.semiauto.deriveReader
+import zio.{Config, ZIO, ZLayer}
+import zio.config.magnolia.deriveConfig
 
-case class AppConfig(server: ServerConfig,
-                     db: DBConfig)
+case class AppConfig(host: String,
+                     port: Int)
 
 object AppConfig {
-  implicit val reader: ConfigReader[AppConfig] = deriveReader
+  private val config: Config[AppConfig] =
+    deriveConfig[AppConfig].nested("AppConfig")
+
+  val live: ZLayer[Any, Config.Error, AppConfig] =
+    ZLayer.fromZIO(
+      ZIO.config[AppConfig](config).map { c =>
+        AppConfig(host = c.host, port = c.port)
+      }
+    )
 }

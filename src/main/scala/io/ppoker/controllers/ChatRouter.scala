@@ -1,74 +1,59 @@
 package io.ppoker.controllers
 
-import cats.effect.std.Queue
-import cats.effect.{Async, Ref}
-import cats.implicits._
-import cats.{Functor, Monad}
-import fs2.Pipe
-import fs2.concurrent.Topic
 import io.circe.parser._
-import io.ppoker.api._
-import io.ppoker.core.{AppState, Disconnect, InputMessage, OutputMessage}
-import io.ppoker.models.UserId
-import io.ppoker.util.Implicits.Logger.LoggerOps
-import org.http4s.dsl.Http4sDsl
-import org.http4s.server.websocket.WebSocketBuilder2
-import org.http4s.websocket.WebSocketFrame
-import org.http4s.websocket.WebSocketFrame.Text
-import org.http4s.{HttpRoutes, Response}
-import org.typelevel.log4cats.Logger
-import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.http4s.Http4sServerInterpreter
+import io.circe._
+import io.circe.syntax._
+import io.ppoker.core.{HubManager, InputMessage, MessageProcessor}
+import sttp.capabilities.WebSockets
+import sttp.capabilities.zio.ZioStreams
+import sttp.tapir.ztapir._
+import sttp.ws.WebSocketFrame
+import zio._
+import zio.stream.ZStream
 
-class ChatRouter[F[_]: Async: Logger: Functor: Monad](
-    webSocketBuilder2: WebSocketBuilder2[F],
-    queue: Queue[F, InputMessage],
-    topic: Topic[F, OutputMessage],
-    appState: Ref[F, AppState]
-) extends Router[F]
-    with Http4sDsl[F] {
+final class ChatRouter(hubManager: HubManager, messageProcessor: MessageProcessor) {
+  val ws: ZServerEndpoint[Any, ZioStreams with WebSockets] =
+    Endpoints.wsEndpoint.zServerLogic { userId =>
+      ZIO.succeed { (in: ZStream[Any, Throwable, WebSocketFrame]) =>
+        val out = for {
+          isClosed <- Promise.make[Throwable, Unit]
 
-  private val websocket: HttpRoutes[F] =
-    HttpRoutes.of[F] { case _ @GET -> Root / "ws" / (user: String) =>
-      val userId = UserId(user)
+          //TODO get from request
+          topic = "hub_1"
 
-      val sentToClient: fs2.Stream[F, WebSocketFrame] =
-        topic
-          .subscribe(1000)
-          // Check if message is intended for this client. If not - skip it
-          .filter(_.forUser(userId))
-          .map(msg => Text(msg.toString)) // TODO toJson
+          dequeue  <- hubManager.subscribe(topic)
 
-      val receiveFromClient: Pipe[F, WebSocketFrame, Unit] =
-        _.collect { case Text(text, _) => parse(text).flatMap(_.as[InputMessage]) }
-          .flatMap(fs2.Stream.fromEither[F](_))
-          .evalTap(Logger[F].logMessage)
-          .evalMap(queue.offer)
-          // Ensure Disconnect message is put into queue in case of connection termination
-          .onFinalize {
-            appState.get.map { state =>
-              if (state.userIsConnected(userId)) {
-                val disconnectMsg = Disconnect(userId)
-                Logger[F].logMessage(disconnectMsg) >> queue.offer(disconnectMsg)
-              }
-            }
-          }
+          fromUser =
+            in.tap(f => ZIO.logInfo(f.toString)).collectZIO {
+              case WebSocketFrame.Ping(bytes) =>
+                ZIO.succeed(WebSocketFrame.Pong(bytes))
+              case close @ WebSocketFrame.Close(_, _) =>
+                isClosed.succeed(()).as(close)
+              case WebSocketFrame.Text(msg, _, _) =>
+                for {
+                  inMsg <- ZIO.fromEither(decode[InputMessage](msg))
+                  outMsg = messageProcessor.processInputMessage(inMsg)
+                  publish <- hubManager.hub(topic).flatMap(_.publishAll(outMsg).commit).unit
+                } yield publish
+            }.filterNot(_ == ())
 
-      webSocketBuilder2.build(sentToClient, receiveFromClient)
-    }
+          fromTopic = ZStream.fromTQueue(dequeue).filter(_.forUser(userId))
+        } yield fromTopic.merge(fromUser).interruptWhen(isClosed)
 
-  private val sessions: ServerEndpoint[Any, F] =
-    Endpoints.sessions.serverLogic { _ =>
-      appState.get.map { state =>
-        ListSessionsResponse(state.sessions.toSeq.map { case (session, (users, _)) =>
-          SessionIdsDTO(session.raw, users.map(_.raw).toSeq)
-        }).asRight
+        ZStream
+          .unwrap(ZIO.scoped(out))
+          .onError(cause => ZIO.logError(cause.prettyPrint))
+          .map(msg => WebSocketFrame.text(msg.toString))
       }
     }
+}
 
-  private val endpoints = List(sessions)
-
-  override val routes: HttpRoutes[F] =
-    Http4sServerInterpreter[F]().toWebSocketRoutes(endpoints)(webSocketBuilder2) <+> websocket
-
+object ChatRouter {
+  val live: ZLayer[HubManager with MessageProcessor, Nothing, ChatRouter] =
+    ZLayer {
+      for {
+        hubManager <- ZIO.service[HubManager]
+        messageProcessor <- ZIO.service[MessageProcessor]
+      } yield new ChatRouter(hubManager, messageProcessor)
+    }
 }
