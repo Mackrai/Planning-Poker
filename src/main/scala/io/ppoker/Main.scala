@@ -1,7 +1,8 @@
 package io.ppoker
 
 import io.ppoker.configs.AppConfig
-import io.ppoker.core.{AppState, HubManager, MessageProcessor}
+import io.ppoker.controllers.ChatRouter
+import io.ppoker.core.{HubManager, MessageProcessor}
 import zio._
 import zio.config.typesafe.TypesafeConfigProvider
 import zio.logging.LogFormat
@@ -17,9 +18,8 @@ object Main extends ZIOAppDefault {
   private val app =
     for {
       appConfig <- ZIO.service[AppConfig]
-      appState <- Ref.make(AppState.singleSession)
 
-      _ <- Server.run(appConfig, appState)
+      _ <- Server.run(appConfig)
     } yield ()
 
   override def run: URIO[Any, ExitCode] =
@@ -27,7 +27,8 @@ object Main extends ZIOAppDefault {
       .provide(
         AppConfig.live,
         HubManager.live,
-        MessageProcessor.live
+        MessageProcessor.live,
+        ChatRouter.live
       )
       .exitCode
 
