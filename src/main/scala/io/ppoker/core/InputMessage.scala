@@ -47,7 +47,7 @@ object GlobalMessage {
   implicit val decoder: Decoder[GlobalMessage] = deriveDecoder
 }
 
-final case class ChatMessage(fromUser: UserId, text: String) extends InputMessage
+final case class ChatMessage(topic: String, fromUser: UserId, text: String) extends InputMessage
 object ChatMessage {
   implicit val decoder: Decoder[ChatMessage] = deriveDecoder
 }

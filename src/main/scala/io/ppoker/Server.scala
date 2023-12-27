@@ -3,7 +3,6 @@ package io.ppoker
 import com.comcast.ip4s.{Host, Port}
 import io.ppoker.configs.AppConfig
 import io.ppoker.controllers.ChatRouter
-import io.ppoker.core.{AppState, HubManager, InputMessage, MessageProcessor, OutputMessage}
 import org.http4s.HttpRoutes
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Router
@@ -13,27 +12,21 @@ import zio._
 import zio.interop.catz.asyncInstance
 
 object Server {
-  // private val routes = ???
+  private def routes(chatRouter: ChatRouter): WebSocketBuilder2[AppRIO] => HttpRoutes[AppRIO] =
+    ZHttp4sServerInterpreter().fromWebSocket(chatRouter.endpoints).toRoutes
 
-  private def wsRoutes(chatRouter: ChatRouter): WebSocketBuilder2[AppRIO] => HttpRoutes[AppRIO] =
-    ZHttp4sServerInterpreter().fromWebSocket(chatRouter.ws).toRoutes
-
-  def run(appConfig: AppConfig, appState: Ref[AppState]) =
+  def run(appConfig: AppConfig) =
     for {
-      host <- ZIO.from(Host.fromString(appConfig.host))
-      port <- ZIO.from(Port.fromInt(appConfig.port))
+      host       <- ZIO.from(Host.fromString(appConfig.host))
+      port       <- ZIO.from(Port.fromInt(appConfig.port))
+      chatRouter <- ZIO.service[ChatRouter]
 
-      hubManager <- ZIO.service[HubManager]
-      messageProcessor <- ZIO.service[MessageProcessor]
-      chatRouter = new ChatRouter(hubManager, messageProcessor)
-
-      _    <-
+      _ <-
         EmberServerBuilder
           .default[AppRIO]
           .withHost(host)
           .withPort(port)
-//          .withHttpApp(Router("/" -> routes).orNotFound)
-          .withHttpWebSocketApp(wsb => Router("/" -> wsRoutes(chatRouter)(wsb)).orNotFound)
+          .withHttpWebSocketApp(wsb => Router("/" -> routes(chatRouter)(wsb)).orNotFound)
           .build
           .useForever
     } yield ()

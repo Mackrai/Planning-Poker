@@ -20,7 +20,7 @@ final case class AppState(sessions: Map[SessionId, (Set[UserId], Set[TaskId])]) 
 
       case GlobalMessage(text) => this -> allUsers.map(ToUser(_, text))
 
-      case ChatMessage(fromUser, text) => this -> getUserSession(fromUser).map(sendToChat(_, text)).toSeq.flatten
+//      case ChatMessage(fromUser, text) => this -> getUserSession(fromUser).map(sendToChat(_, text)).toSeq.flatten
 
       case Join(userId, sessionId) =>
         getUserSession(userId).collect {
@@ -37,7 +37,7 @@ final case class AppState(sessions: Map[SessionId, (Set[UserId], Set[TaskId])]) 
 
   def userIsConnected(userId: UserId): Boolean = getUserSession(userId).isEmpty
 
-  private def allUsers: Seq[UserId] = sessions.values.toSeq.flatMap(_._1.toSeq)
+  private def allUsers: List[UserId] = sessions.values.toSeq.flatMap(_._1.toSeq).toList
 
   private def getUserSession(userId: UserId): Option[SessionId] = sessions.find(_._2._1.contains(userId)).map(_._1)
 
